@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember, TaskPriority } from '../../types';
+import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember } from '../../types';
 import AttachmentDropZone from './AttachmentDropZone';
 
 interface TaskModalProps {
@@ -28,8 +28,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
-  const [priority, setPriority] = useState<TaskPriority>(task.priority || 'MEDIUM');
-  const [dueDate, setDueDate] = useState(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '');
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [saving, setSaving] = useState(false);
@@ -109,10 +107,8 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   useEffect(() => {
     setTitle(task.title);
     setDescription(task.description || '');
-    setPriority(task.priority || 'MEDIUM');
-    setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '');
     setSaveState('idle');
-  }, [task.id, task.title, task.description, task.priority, task.dueDate]);
+  }, [task.id, task.title, task.description]);
 
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
@@ -203,7 +199,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     };
   }, []);
 
-  const persistTask = async (payload: { title?: string; description?: string; priority?: TaskPriority; dueDate?: string | null }) => {
+  const persistTask = async (payload: { title?: string; description?: string }) => {
     setSaveState('saving');
     try {
       const res = await api.patch(`/tasks/${task.id}`, payload);
@@ -236,17 +232,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
       setEditing(false);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const updateMetadata = async (nextPriority: TaskPriority, nextDueDate: string) => {
-    try {
-      await persistTask({
-        priority: nextPriority,
-        dueDate: nextDueDate || null,
-      });
-    } catch {
-      // keep local state so user can retry
     }
   };
 
@@ -310,39 +295,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
           {saveState === 'saving' && t('tasks.autosave.saving')}
           {saveState === 'saved' && t('tasks.autosave.saved')}
           {saveState === 'error' && t('tasks.autosave.error')}
-        </div>
-
-        <div className="task-modal-meta-fields">
-          <div className="task-meta-field">
-            <label>{t('tasks.priority.title')}</label>
-            <select
-              value={priority}
-              disabled={!canEdit}
-              onChange={(e) => {
-                const next = e.target.value as TaskPriority;
-                setPriority(next);
-                void updateMetadata(next, dueDate);
-              }}
-            >
-              <option value="LOW">{t('tasks.priority.low')}</option>
-              <option value="MEDIUM">{t('tasks.priority.medium')}</option>
-              <option value="HIGH">{t('tasks.priority.high')}</option>
-              <option value="URGENT">{t('tasks.priority.urgent')}</option>
-            </select>
-          </div>
-          <div className="task-meta-field">
-            <label>{t('tasks.dueDate')}</label>
-            <input
-              type="datetime-local"
-              value={dueDate}
-              disabled={!canEdit}
-              onChange={(e) => {
-                const next = e.target.value;
-                setDueDate(next);
-                void updateMetadata(priority, next);
-              }}
-            />
-          </div>
         </div>
 
         {/* Tags row */}

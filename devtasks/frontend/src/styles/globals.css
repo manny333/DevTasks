@@ -505,25 +505,9 @@ body {
   display: flex; flex-direction: column; gap: 8px;
   padding: 14px 20px; border-bottom: 1px solid var(--border);
 }
-.create-task-field-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
 .create-task-field-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.07em; color: var(--text-muted);
-}
-.create-task-select,
-.create-task-date-input {
-  width: 100%; height: 34px;
-  border: 1px solid var(--border); border-radius: 8px;
-  background: var(--bg-tertiary); color: var(--text-primary);
-  font-size: 12px; padding: 0 10px;
-}
-.create-task-select:focus,
-.create-task-date-input:focus {
-  outline: none; border-color: var(--accent);
 }
 .create-task-status-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .ct-status-pill {
@@ -836,9 +820,6 @@ body {
     width: 100%;
   }
 
-  .create-task-field-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 520px) {

@@ -1,5 +1,4 @@
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
-export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type ProjectRole = 'OWNER' | 'MEMBER';
 export type AccessType = 'FULL' | 'EDITOR' | 'VIEWER';
 
@@ -38,8 +37,6 @@ export interface Task {
   title: string;
   description: string | null;
   status: TaskStatus;
-  priority: TaskPriority;
-  dueDate: string | null;
   archived: boolean;
   position: number;
   sectionId: string;

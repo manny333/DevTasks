@@ -76,14 +76,6 @@
     "statusLabel": "Estado",
     "createAction": "Crear Tarea",
     "assignMember": "Asignar miembro",
-    "dueDate": "Fecha límite",
-    "priority": {
-      "title": "Prioridad",
-      "low": "Baja",
-      "medium": "Media",
-      "high": "Alta",
-      "urgent": "Urgente"
-    },
     "autosave": {
       "saving": "Guardando cambios...",
       "saved": "Guardado",

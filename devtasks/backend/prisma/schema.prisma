@@ -32,13 +32,6 @@ enum AccessType {
   VIEWER  // Read-only
 }
 
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -123,8 +116,6 @@ model Task {
   title       String
   description String?
   status      TaskStatus @default(TODO)
-  priority    TaskPriority @default(MEDIUM)
-  dueDate     DateTime?
   archived    Boolean    @default(false)
   position    Int        @default(0)
   createdAt   DateTime   @default(now())

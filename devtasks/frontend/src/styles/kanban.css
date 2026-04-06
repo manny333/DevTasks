@@ -364,43 +364,6 @@
 .task-save-state-saved { color: #22c55e; }
 .task-save-state-error { color: #ef4444; }
 
-.task-modal-meta-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.task-meta-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.task-meta-field label {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.task-meta-field select,
-.task-meta-field input {
-  width: 100%;
-  height: 34px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  padding: 0 10px;
-  font-size: 12px;
-}
-
-.task-meta-field select:focus,
-.task-meta-field input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
 .task-modal-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tag-add-btn {
   border: 1px dashed var(--border); border-radius: 20px; padding: 2px 8px;
@@ -1179,10 +1142,6 @@ a.attachment-name:hover { color: var(--accent); }
 
   .task-modal-actions {
     gap: 6px;
-  }
-
-  .task-modal-meta-fields {
-    grid-template-columns: 1fr;
   }
 
   .task-modal-actions .btn-primary,

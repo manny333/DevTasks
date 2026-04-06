@@ -13,23 +13,9 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
     if (!access) { res.status(403).json({ error: 'No access to this section' }); return; }
     if (!canEdit(access)) { res.status(403).json({ error: 'You have read-only access' }); return; }
 
-    const { title, description, status, priority, dueDate } = req.body;
+    const { title, description, status } = req.body;
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       res.status(400).json({ error: 'Title is required' });
-      return;
-    }
-
-    if (priority !== undefined && !['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(priority)) {
-      res.status(400).json({ error: 'Invalid priority' });
-      return;
-    }
-
-    const dueDateValue = dueDate === undefined || dueDate === null || dueDate === ''
-      ? null
-      : new Date(dueDate);
-
-    if (dueDateValue instanceof Date && Number.isNaN(dueDateValue.getTime())) {
-      res.status(400).json({ error: 'Invalid dueDate' });
       return;
     }
 
@@ -45,8 +31,6 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
         title: title.trim(),
         description: description || null,
         status: targetStatus,
-        priority: priority || 'MEDIUM',
-        dueDate: dueDateValue,
         position: (last?.position ?? -1) + 1,
         sectionId: req.params.sectionId as string,
       },
