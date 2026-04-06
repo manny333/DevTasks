@@ -9,6 +9,7 @@
     "start": "prisma migrate deploy && node dist/index.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:roadmap": "tsx prisma/seed-roadmap.ts",
     "db:studio": "prisma studio"
   },
   "keywords": [],
