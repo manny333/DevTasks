@@ -75,7 +75,20 @@
     "titlePlaceholder": "Título de la tarea...",
     "statusLabel": "Estado",
     "createAction": "Crear Tarea",
-    "assignMember": "Asignar miembro"
+    "assignMember": "Asignar miembro",
+    "dueDate": "Fecha límite",
+    "priority": {
+      "title": "Prioridad",
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta",
+      "urgent": "Urgente"
+    },
+    "autosave": {
+      "saving": "Guardando cambios...",
+      "saved": "Guardado",
+      "error": "No se pudo guardar"
+    }
   },
   "attachments": {
     "title": "Archivos adjuntos",

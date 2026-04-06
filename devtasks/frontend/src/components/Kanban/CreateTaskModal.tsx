@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
-import type { Tag, Task, TaskStatus } from '../../types';
+import type { Tag, Task, TaskStatus, TaskPriority } from '../../types';
 
 interface CreateTaskModalProps {
   sectionId: string;
@@ -27,6 +27,8 @@ export default function CreateTaskModal({
   const titleRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(defaultTitle);
   const [description, setDescription] = useState(defaultDescription);
+  const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
+  const [dueDate, setDueDate] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -58,6 +60,8 @@ export default function CreateTaskModal({
         title: title.trim(),
         status: defaultStatus,
         description: description.trim() || undefined,
+        priority,
+        dueDate: dueDate || null,
       });
       const task: Task = res.data;
       // Attach selected tags
@@ -109,6 +113,31 @@ export default function CreateTaskModal({
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
           />
+
+          <div className="create-task-field create-task-field-grid">
+            <div>
+              <span className="create-task-field-label">{t('tasks.priority.title')}</span>
+              <select
+                className="create-task-select"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as TaskPriority)}
+              >
+                <option value="LOW">{t('tasks.priority.low')}</option>
+                <option value="MEDIUM">{t('tasks.priority.medium')}</option>
+                <option value="HIGH">{t('tasks.priority.high')}</option>
+                <option value="URGENT">{t('tasks.priority.urgent')}</option>
+              </select>
+            </div>
+            <div>
+              <span className="create-task-field-label">{t('tasks.dueDate')}</span>
+              <input
+                className="create-task-date-input"
+                type="datetime-local"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            </div>
+          </div>
 
           {/* Tags */}
           {projectTags.length > 0 && (

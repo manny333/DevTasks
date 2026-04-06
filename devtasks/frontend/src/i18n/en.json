@@ -75,7 +75,20 @@
     "titlePlaceholder": "Task title...",
     "statusLabel": "Status",
     "createAction": "Create Task",
-    "assignMember": "Assign member"
+    "assignMember": "Assign member",
+    "dueDate": "Due date",
+    "priority": {
+      "title": "Priority",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "autosave": {
+      "saving": "Saving changes...",
+      "saved": "Saved",
+      "error": "Could not save"
+    }
   },
   "attachments": {
     "title": "Attachments",

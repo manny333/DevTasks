@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember } from '../../types';
+import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember, TaskPriority } from '../../types';
 import AttachmentDropZone from './AttachmentDropZone';
 
 interface TaskModalProps {
@@ -28,9 +28,12 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
+  const [priority, setPriority] = useState<TaskPriority>(task.priority || 'MEDIUM');
+  const [dueDate, setDueDate] = useState(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '');
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sectionMenuOpen, setSectionMenuOpen] = useState(false);
   const [sectionMenuPos, setSectionMenuPos] = useState({ top: 0, left: 0 });
   const sectionBtnRef = useRef<HTMLButtonElement>(null);
@@ -52,6 +55,8 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [attachmentView, setAttachmentView] = useState<'grid' | 'list'>('grid');
   const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentSection = (allSections || []).find((s) => s.id === task.sectionId);
 
@@ -100,6 +105,14 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   useEffect(() => {
     api.get(`/tasks/${task.id}/attachments`).then((res) => setAttachments(res.data));
   }, [task.id]);
+
+  useEffect(() => {
+    setTitle(task.title);
+    setDescription(task.description || '');
+    setPriority(task.priority || 'MEDIUM');
+    setDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '');
+    setSaveState('idle');
+  }, [task.id, task.title, task.description, task.priority, task.dueDate]);
 
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
@@ -183,14 +196,57 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     return () => window.removeEventListener('keydown', handler);
   }, [onClose, lightbox]);
 
+  useEffect(() => {
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      if (saveStateTimerRef.current) clearTimeout(saveStateTimerRef.current);
+    };
+  }, []);
+
+  const persistTask = async (payload: { title?: string; description?: string; priority?: TaskPriority; dueDate?: string | null }) => {
+    setSaveState('saving');
+    try {
+      const res = await api.patch(`/tasks/${task.id}`, payload);
+      onUpdate(res.data);
+      setSaveState('saved');
+      if (saveStateTimerRef.current) clearTimeout(saveStateTimerRef.current);
+      saveStateTimerRef.current = setTimeout(() => setSaveState('idle'), 1200);
+      return res.data;
+    } catch {
+      setSaveState('error');
+      throw new Error('autosave failed');
+    }
+  };
+
+  useEffect(() => {
+    if (!editing || !canEdit) return;
+    if (title === task.title && description === (task.description || '')) return;
+
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      void persistTask({ title: title.trim(), description: description.trim() || '' });
+    }, 700);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, editing, canEdit, task.id]);
+
   const save = async () => {
     setSaving(true);
     try {
-      const res = await api.patch(`/tasks/${task.id}`, { title, description });
-      onUpdate(res.data);
+      await persistTask({ title: title.trim(), description: description.trim() || '' });
       setEditing(false);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateMetadata = async (nextPriority: TaskPriority, nextDueDate: string) => {
+    try {
+      await persistTask({
+        priority: nextPriority,
+        dueDate: nextDueDate || null,
+      });
+    } catch {
+      // keep local state so user can retry
     }
   };
 
@@ -248,6 +304,45 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
             </h2>
           )}
           <button className="btn-icon modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <div className={`task-save-state task-save-state-${saveState}`}>
+          {saveState === 'saving' && t('tasks.autosave.saving')}
+          {saveState === 'saved' && t('tasks.autosave.saved')}
+          {saveState === 'error' && t('tasks.autosave.error')}
+        </div>
+
+        <div className="task-modal-meta-fields">
+          <div className="task-meta-field">
+            <label>{t('tasks.priority.title')}</label>
+            <select
+              value={priority}
+              disabled={!canEdit}
+              onChange={(e) => {
+                const next = e.target.value as TaskPriority;
+                setPriority(next);
+                void updateMetadata(next, dueDate);
+              }}
+            >
+              <option value="LOW">{t('tasks.priority.low')}</option>
+              <option value="MEDIUM">{t('tasks.priority.medium')}</option>
+              <option value="HIGH">{t('tasks.priority.high')}</option>
+              <option value="URGENT">{t('tasks.priority.urgent')}</option>
+            </select>
+          </div>
+          <div className="task-meta-field">
+            <label>{t('tasks.dueDate')}</label>
+            <input
+              type="datetime-local"
+              value={dueDate}
+              disabled={!canEdit}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDueDate(next);
+                void updateMetadata(priority, next);
+              }}
+            />
+          </div>
         </div>
 
         {/* Tags row */}

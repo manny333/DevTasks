@@ -10,12 +10,31 @@ router.use(authMiddleware);
 router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!await requireTaskAccess(req, res)) return;
-    const { title, description } = req.body;
+    const { title, description, priority, dueDate } = req.body;
+
+    if (priority !== undefined && !['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(priority)) {
+      res.status(400).json({ error: 'Invalid priority' });
+      return;
+    }
+
+    const dueDateValue = dueDate === undefined
+      ? undefined
+      : dueDate === null || dueDate === ''
+      ? null
+      : new Date(dueDate);
+
+    if (dueDateValue instanceof Date && Number.isNaN(dueDateValue.getTime())) {
+      res.status(400).json({ error: 'Invalid dueDate' });
+      return;
+    }
+
     const updated = await prisma.task.update({
       where: { id: req.params.id as string },
       data: {
         ...(title && { title: title.trim() }),
         ...(description !== undefined && { description }),
+        ...(priority !== undefined && { priority }),
+        ...(dueDate !== undefined && { dueDate: dueDateValue }),
       },
       include: { tags: { include: { tag: true } }, assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } }, _count: { select: { comments: true } } },
     });
