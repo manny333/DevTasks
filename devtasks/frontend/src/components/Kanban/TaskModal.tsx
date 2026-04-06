@@ -169,15 +169,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     } catch { /* ignore */ }
   };
 
-  const updateAssigneeAccess = async (userId: string, accessType: AccessType) => {
-    try {
-      const res = await api.patch(`/tasks/${task.id}/assignees/${userId}`, { accessType });
-      setAssignees((prev) =>
-        prev.map((a) => (a.userId === userId ? { ...a, accessType: res.data.accessType } : a))
-      );
-    } catch { /* ignore */ }
-  };
-
   // Close on Escape — lightbox first, then modal
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

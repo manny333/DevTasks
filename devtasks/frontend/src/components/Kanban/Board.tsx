@@ -165,7 +165,7 @@ export default function Board({ section, projectTags, allSections, projectMember
     updateTask({ ...task, archived: res.data.archived });
   };
 
-  const deleteTask = (taskId: string) => {
+  const deleteTask = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
