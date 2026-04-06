@@ -1,3 +1,19 @@
 node_modules/
 dist/
 .env
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Misc
+*.local

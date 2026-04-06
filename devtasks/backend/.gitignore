@@ -3,3 +3,9 @@ node_modules
 .env
 
 /src/generated/prisma
+
+# Compiled output
+dist/
+
+# Runtime upload storage (user files — never commit)
+uploads/
