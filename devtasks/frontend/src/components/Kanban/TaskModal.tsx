@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import type { Task, Tag, Comment, Section, TaskAssignee, AccessType, TaskAttachment, ProjectMember } from '../../types';
+import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember } from '../../types';
 import AttachmentDropZone from './AttachmentDropZone';
 
 interface TaskModalProps {
