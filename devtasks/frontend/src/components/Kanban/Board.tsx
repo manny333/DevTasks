@@ -39,6 +39,8 @@ export default function Board({ section, projectTags, allSections, projectMember
   const [overColumnStatus, setOverColumnStatus] = useState<TaskStatus | null>(null);
   const [createDefaults, setCreateDefaults] = useState<CreateDefaults | null>(null);
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [mobileStatusTab, setMobileStatusTab] = useState<TaskStatus>('TODO');
   const deleteTaskTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
@@ -62,6 +64,18 @@ export default function Board({ section, projectTags, allSections, projectMember
     if (!loading) onTasksChanged?.(section.id, tasks);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks, loading]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 640px)');
+    const update = () => setIsMobileView(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    setMobileStatusTab('TODO');
+  }, [section.id]);
 
   const tasksForColumn = (status: TaskStatus) =>
     tasks.filter((t) => t.status === status && (!t.archived || showArchived));
@@ -210,6 +224,29 @@ export default function Board({ section, projectTags, allSections, projectMember
             {t('tasks.showArchived')}
           </label>
         </div>
+
+        {isMobileView && (
+          <div className="board-mobile-status-tabs" role="tablist" aria-label={t('tasks.statusTitle')}>
+            {COLUMNS.map((status) => {
+              const count = tasksForColumn(status).length;
+              const active = mobileStatusTab === status;
+              return (
+                <button
+                  key={status}
+                  className={`board-mobile-status-tab${active ? ' active' : ''}`}
+                  data-status={status}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setMobileStatusTab(status)}
+                >
+                  <span className="board-mobile-status-tab-label">{t(`tasks.status.${status}`)}</span>
+                  <span className="board-mobile-status-tab-count">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {totalCount > 0 && (
           <div className="board-progress-bar">
             <div className="board-progress-fill" style={{ width: `${progress}%`, background: section.color }} />
@@ -217,29 +254,57 @@ export default function Board({ section, projectTags, allSections, projectMember
         )}
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-        <div className="kanban-board">
-          {COLUMNS.map((status) => (
-            <Column
-              key={status}
-              status={status}
-              tasks={tasksForColumn(status)}
-              canEdit={canEditBoard}
-              onTaskClick={setSelectedTask}
-              onOpenCreate={handleOpenCreate}
-              onAdvance={handleAdvance}
-              allSections={allSections}
-              onMoveSection={handleMoveSection}
-              onArchive={archiveTask}
-              showPlaceholder={activeTask !== null && overColumnStatus === status && activeTask.status !== status}
-            />
-          ))}
+      {isMobileView ? (
+        <div className="kanban-board mobile-single-column">
+          <Column
+            key={mobileStatusTab}
+            status={mobileStatusTab}
+            tasks={tasksForColumn(mobileStatusTab)}
+            canEdit={canEditBoard}
+            onTaskClick={setSelectedTask}
+            onOpenCreate={handleOpenCreate}
+            onAdvance={handleAdvance}
+            allSections={allSections}
+            onMoveSection={handleMoveSection}
+            onArchive={archiveTask}
+          />
         </div>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+          <div className="kanban-board">
+            {COLUMNS.map((status) => (
+              <Column
+                key={status}
+                status={status}
+                tasks={tasksForColumn(status)}
+                canEdit={canEditBoard}
+                onTaskClick={setSelectedTask}
+                onOpenCreate={handleOpenCreate}
+                onAdvance={handleAdvance}
+                allSections={allSections}
+                onMoveSection={handleMoveSection}
+                onArchive={archiveTask}
+                showPlaceholder={activeTask !== null && overColumnStatus === status && activeTask.status !== status}
+              />
+            ))}
+          </div>
 
-        <DragOverlay>
-          {activeTask ? <TaskCard task={activeTask} isDragging /> : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay>
+            {activeTask ? <TaskCard task={activeTask} isDragging /> : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {canEditBoard && isMobileView && (
+        <button
+          className="board-fab-create"
+          onClick={() => handleOpenCreate(mobileStatusTab)}
+          title={t('tasks.create')}
+        >
+          <span>+</span>
+          {t('tasks.create')}
+        </button>
+      )}
 
       {selectedTask && (
         <TaskModal
