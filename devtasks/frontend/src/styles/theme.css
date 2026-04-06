@@ -1,0 +1,28 @@
+/* ─── Theme Variables ────────────────────────────────── */
+:root {
+  --accent: #6366f1;
+  --accent-hover: #4f52d9;
+  --danger: #ef4444;
+  --success: #22c55e;
+
+  /* Light */
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f0f5;
+  --border: #e2e2e8;
+  --text-primary: #111111;
+  --text-secondary: #555566;
+  --text-muted: #9090a0;
+  --shadow: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] {
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d2e;
+  --bg-tertiary: #252840;
+  --border: #2e3150;
+  --text-primary: #f0f0f8;
+  --text-secondary: #a0a8c0;
+  --text-muted: #606880;
+  --shadow: rgba(0, 0, 0, 0.4);
+}

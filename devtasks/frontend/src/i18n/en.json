@@ -1,0 +1,154 @@
+{
+  "app": {
+    "name": "DevTasks"
+  },
+  "auth": {
+    "signIn": "Sign in with Google",
+    "signOut": "Sign out",
+    "welcome": "Welcome to DevTasks",
+    "subtitle": "Simple task management for developers"
+  },
+  "projects": {
+    "title": "My Projects",
+    "subtitle": "Manage and organize your development workflow",
+    "create": "New Project",
+    "name": "Project name",
+    "namePlaceholder": "Project name...",
+    "description": "Description (optional)",
+    "sections": "section",
+    "sections_plural": "sections",
+    "members": "member",
+    "members_plural": "members",
+    "noProjects": "No projects yet. Create your first one!",
+    "delete": "Delete project",
+    "deleteTitle": "Delete project",
+    "editTitle": "Edit project",
+    "deleteWarning": "This action is irreversible. Type the project name to confirm",
+    "deleteType": "exactly as shown",
+    "deleteConfirm": "Are you sure you want to delete this project?",
+    "invite": "Invite member",
+    "inviteByEmail": "Enter email address",
+    "templateStep": "Choose a template",
+    "templateSubtitle": "Start fast with a preset, or go blank.",
+    "usingTemplate": "Using template",
+    "templates": {
+      "blank": "Blank",
+      "blankDesc": "Empty project, add your own sections",
+      "blankHint": "No sections",
+      "software": "Software Dev",
+      "softwareDesc": "Daily Focus, Backlog, Bugs & more",
+      "personal": "Personal",
+      "personalDesc": "Daily Focus, This Week, Someday",
+      "marketing": "Marketing",
+      "marketingDesc": "Ideas, Review, Published"
+    }
+  },
+  "sections": {
+    "title": "Sections",
+    "create": "New Section",
+    "name": "Section name",
+    "color": "Color",
+    "delete": "Delete section",
+    "archive": "Archive section",
+    "unarchive": "Unarchive section",
+    "showArchived": "Show archived",
+    "hideArchived": "Hide archived",
+    "noSections": "No sections yet. Create one to get started."
+  },
+  "tasks": {
+    "create": "New Task",
+    "title": "Task title",
+    "description": "Description (markdown supported)",
+    "status": {
+      "TODO": "To Do",
+      "IN_PROGRESS": "In Progress",
+      "IN_REVIEW": "In Review",
+      "DONE": "Done"
+    },
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "showArchived": "Show archived",
+    "advance": "Advance to next stage",
+    "moveTo": "Move to section",
+    "useTemplate": "Use template",
+    "blankTask": "Blank task",
+    "titlePlaceholder": "Task title...",
+    "statusLabel": "Status",
+    "createAction": "Create Task",
+    "assignMember": "Assign member"
+  },
+  "attachments": {
+    "title": "Attachments",
+    "upload": "Attach file",
+    "uploading": "Uploading…",
+    "delete": "Remove attachment",
+    "dropzone": "Attach files",
+    "dropzoneHint": "Drop files here, or click to browse",
+    "dropHere": "Drop to attach",
+    "pasteHint": "You can also paste from clipboard",
+    "viewGrid": "Grid view",
+    "viewList": "List view"
+  },
+  "comments": {
+    "title": "Comments",
+    "placeholder": "Write a comment (markdown supported)...",
+    "add": "Comment",
+    "delete": "Delete"
+  },
+  "tags": {
+    "title": "Tags",
+    "create": "New Tag",
+    "name": "Tag name",
+    "color": "Color"
+  },
+  "templates": {
+    "title": "Templates",
+    "subtitle": "Choose a template or start blank",
+    "create": "New Template",
+    "name": "Template name",
+    "description": "Template description (markdown)",
+    "fields": "Custom fields",
+    "search": "Search templates...",
+    "blankDesc": "Start from scratch",
+    "saved": "Saved templates",
+    "empty": "No templates yet. Create one below."
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading...",
+    "search": "Search tasks and projects...",
+    "noResults": "No results found"
+  },
+  "shortcuts": {
+    "newTask": "New task",
+    "search": "Search",
+    "close": "Close"
+  },
+  "members": {
+    "title": "Members",
+    "owner": "Owner",
+    "invite": "Invite",
+    "remove": "Remove",
+    "emailPlaceholder": "Email address",
+    "inviteError": "Could not invite user",
+    "shareSection": "Share section",
+    "selectSection": "Select a section above to manage its access",
+    "noSectionMembers": "No section-level members yet",
+    "sectionAccess": "Section Access",
+    "tabs": {
+      "project": "Project",
+      "section": "Section"
+    },
+    "access": {
+      "full": "Full Access",
+      "editor": "Editor",
+      "viewer": "Viewer"
+    }
+  }
+}

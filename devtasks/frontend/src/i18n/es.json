@@ -1,0 +1,156 @@
+{
+  "app": {
+    "name": "DevTasks"
+  },
+  "auth": {
+    "signIn": "Iniciar sesión con Google",
+    "signOut": "Cerrar sesión",
+    "welcome": "Bienvenido a DevTasks",
+    "subtitle": "Gestión de tareas simple para desarrolladores"
+  },
+  "projects": {
+    "title": "Mis Proyectos",
+    "subtitle": "Gestiona y organiza tu flujo de trabajo de desarrollo",
+    "create": "Nuevo Proyecto",
+    "name": "Nombre del proyecto",
+    "namePlaceholder": "Nombre del proyecto...",
+    "description": "Descripción (opcional)",
+    "sections": "sección",
+    "sections_plural": "secciones",
+    "members": "miembro",
+    "members_plural": "miembros",
+    "noProjects": "Sin proyectos aún. ¡Crea tu primer proyecto!",
+    "delete": "Eliminar proyecto",
+    "deleteTitle": "Eliminar proyecto",
+    "editTitle": "Editar proyecto",
+    "deleteWarning": "Esta acción es irreversible. Escribe el nombre del proyecto para confirmar",
+    "deleteType": "exactamente como aparece",
+    "deleteConfirm": "¿Estás seguro de que quieres eliminar este proyecto?",
+    "invite": "Invitar miembro",
+    "inviteByEmail": "Ingresa el correo electrónico",
+    "templateStep": "Elige una plantilla",
+    "templateSubtitle": "Empieza rápido con una configuración o en blanco.",
+    "usingTemplate": "Usando plantilla",
+    "templates": {
+      "blank": "En blanco",
+      "blankDesc": "Proyecto vacío, agrega tus propias secciones",
+      "blankHint": "Sin secciones",
+      "software": "Software Dev",
+      "softwareDesc": "Daily Focus, Backlog, Bugs y más",
+      "personal": "Personal",
+      "personalDesc": "Daily Focus, Esta semana, Algún día",
+      "marketing": "Marketing",
+      "marketingDesc": "Ideas, Revisión, Publicado"
+    }
+  },
+  "sections": {
+    "title": "Secciones",
+    "create": "Nueva Sección",
+    "name": "Nombre de la sección",
+    "color": "Color",
+    "delete": "Eliminar sección",
+    "archive": "Archivar sección",
+    "unarchive": "Desarchivar sección",
+    "showArchived": "Mostrar archivadas",
+    "hideArchived": "Ocultar archivadas",
+    "noSections": "Sin secciones aún. Crea una para comenzar."
+  },
+  "tasks": {
+    "create": "Nueva Tarea",
+    "title": "Título de la tarea",
+    "description": "Descripción (soporta markdown)",
+    "status": {
+      "TODO": "Por hacer",
+      "IN_PROGRESS": "En progreso",
+      "IN_REVIEW": "En revisión",
+      "DONE": "Completada"
+    },
+    "archive": "Archivar",
+    "unarchive": "Desarchivar",
+    "showArchived": "Mostrar archivadas",
+    "advance": "Pasar a la siguiente etapa",
+    "moveTo": "Mover a sección",
+    "useTemplate": "Usar plantilla",
+    "blankTask": "Tarea en blanco",
+    "titlePlaceholder": "Título de la tarea...",
+    "statusLabel": "Estado",
+    "createAction": "Crear Tarea",
+    "assignMember": "Asignar miembro"
+  },
+  "attachments": {
+    "title": "Archivos adjuntos",
+    "upload": "Adjuntar archivo",
+    "uploading": "Subiendo…",
+    "delete": "Eliminar adjunto",
+    "dropzone": "Adjuntar archivos",
+    "dropzoneHint": "Arrastra archivos aqu\u00ed, o haz clic para buscar",
+    "dropHere": "Suelta para adjuntar",
+    "pasteHint": "Tambi\u00e9n puedes pegar desde el portapapeles",
+    "viewGrid": "Vista cuadr\u00edcula",
+    "viewList": "Vista lista"
+  },
+  "comments": {
+    "title": "Comentarios",
+    "placeholder": "Escribe un comentario (soporta markdown)...",
+    "add": "Comentar",
+    "delete": "Eliminar"
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "create": "Nueva Etiqueta",
+    "name": "Nombre de la etiqueta",
+    "color": "Color"
+  },
+  "templates": {
+    "title": "Plantillas",
+    "subtitle": "Elige una plantilla o empieza en blanco",
+    "create": "Nueva Plantilla",
+    "name": "Nombre de la plantilla",
+    "description": "Descripción de la plantilla (markdown)",
+    "fields": "Campos personalizados",
+    "search": "Buscar plantillas...",
+    "blankDesc": "Comenzar desde cero",
+    "saved": "Plantillas guardadas",
+    "empty": "Sin plantillas. Crea una abajo."
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "back": "Volver",
+    "next": "Siguiente",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "loading": "Cargando...",
+    "search": "Buscar tareas y proyectos...",
+    "noResults": "Sin resultados"
+  },
+  "shortcuts": {
+    "newTask": "Nueva tarea",
+    "search": "Buscar",
+    "close": "Cerrar"
+  },
+  "members": {
+    "title": "Miembros",
+    "owner": "Propietario",
+    "invite": "Invitar",
+    "remove": "Eliminar",
+    "emailPlaceholder": "Correo electrónico",
+    "inviteError": "No se pudo invitar al usuario",
+    "shareSection": "Compartir sección",
+    "selectSection": "Selecciona una sección arriba para gestionar su acceso",
+    "noSectionMembers": "Sin miembros de sección aún",
+    "sectionAccess": "Acceso a sección",
+    "tabs": {
+      "project": "Proyecto",
+      "section": "Sección"
+    },
+    "access": {
+      "full": "Acceso completo",
+      "editor": "Editor",
+      "viewer": "Lector"
+    }
+  }
+}

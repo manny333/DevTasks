@@ -1,0 +1,204 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum ProjectRole {
+  OWNER
+  MEMBER
+}
+
+enum AccessType {
+  FULL    // Full access — can do everything an owner can except delete project
+  EDITOR  // Can create/edit/move tasks and sections they have access to
+  VIEWER  // Read-only
+}
+
+// ─── Models ──────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  avatar    String?
+  googleId  String   @unique
+  createdAt DateTime @default(now())
+
+  ownedProjects    Project[]        @relation("ProjectOwner")
+  memberships      ProjectMember[]
+  sectionAccess    SectionMember[]
+  taskAssignments  TaskAssignee[]
+  comments         Comment[]
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+
+  ownerId String
+  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  members   ProjectMember[]
+  sections  Section[]
+  tags      Tag[]
+  templates TaskTemplate[]
+}
+
+model ProjectMember {
+  id         String      @id @default(cuid())
+  role       ProjectRole @default(MEMBER)
+  accessType AccessType  @default(FULL)
+  joinedAt   DateTime    @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Section {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  position    Int      @default(0)
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  tasks     Task[]
+  templates TaskTemplate[]
+  members   SectionMember[]
+}
+
+model SectionMember {
+  id         String     @id @default(cuid())
+  accessType AccessType @default(VIEWER)
+  joinedAt   DateTime   @default(now())
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, userId])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  archived    Boolean    @default(false)
+  position    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  comments    Comment[]
+  tags        TaskTag[]
+  assignees   TaskAssignee[]
+  attachments TaskAttachment[]
+}
+
+model TaskAttachment {
+  id           String   @id @default(cuid())
+  filename     String   // original filename shown to users
+  storageKey   String   // provider-specific key (local path or blob name)
+  mimeType     String
+  size         Int      // bytes
+  createdAt    DateTime @default(now())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskAssignee {
+  accessType AccessType @default(VIEWER)
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  taskId String
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String
+  color String @default("#6366f1")
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  tasks TaskTag[]
+
+  @@unique([projectId, name])
+}
+
+model TaskTag {
+  taskId String
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  tagId String
+  tag   Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+}
+
+model TaskTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  fields      Json     @default("[]")
+  createdAt   DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+}
