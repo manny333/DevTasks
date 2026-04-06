@@ -23,6 +23,8 @@ interface TaskModalProps {
 export default function TaskModal({ task, projectTags, projectMembers = [], canEdit = true, allSections, onClose, onUpdate, onDelete, onMoveSection }: TaskModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
+  const getAttachmentUrl = (url: string) => (url.startsWith('http') ? url : `${backendBaseUrl}${url}`);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
@@ -500,7 +502,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               <div className="attachment-grid">
                 {attachments.map((a) => {
                   const isImage = a.mimeType.startsWith('image/');
-                  const fullUrl = `http://localhost:5001${a.url}`;
+                  const fullUrl = getAttachmentUrl(a.url);
                   return (
                     <div key={a.id} className="attachment-grid-cell">
                       {isImage ? (
@@ -543,7 +545,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               <div className="attachment-list">
                 {attachments.map((a) => {
                   const isImage = a.mimeType.startsWith('image/');
-                  const fullUrl = `http://localhost:5001${a.url}`;
+                  const fullUrl = getAttachmentUrl(a.url);
                   return (
                     <div key={a.id} className="attachment-item">
                       {isImage ? (
