@@ -973,6 +973,13 @@ a.attachment-name:hover { color: var(--accent); }
     height: 38px;
   }
 
+  /* On mobile the FAB is the primary create action */
+  .board-toolbar .btn-primary,
+  .column-add-btn,
+  .column-footer {
+    display: none;
+  }
+
   .show-archived-toggle {
     margin-left: 0;
   }
