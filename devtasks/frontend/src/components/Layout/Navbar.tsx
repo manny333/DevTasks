@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import logoIcon from '../../assets/logo-kanvy.png';
+import logoText from '../../assets/logo-kanvy-text.png';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -16,8 +18,9 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link to="/projects" className="navbar-brand">
-        {t('app.name')}
+      <Link to="/projects" className="navbar-brand navbar-logo-pill">
+        <img src={logoIcon} alt="Kanvy" style={{ height: '32px', filter: 'none' }} />
+        <img src={logoText} alt="Kanvy" style={{ height: '20px', marginLeft: '8px', filter: 'none' }} />
       </Link>
 
       <div className="navbar-actions">

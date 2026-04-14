@@ -24,6 +24,7 @@ export default function Projects() {
   const [editTarget, setEditTarget] = useState<Project | null>(null);
   const [editForm, setEditForm] = useState({ name: '', description: '' });
   const [editSaving, setEditSaving] = useState(false);
+  const [search, setSearch] = useState('');
 
   const closeCreate = () => {
     setShowCreate(false);
@@ -122,12 +123,31 @@ export default function Projects() {
           </button>
         </div>
       ) : (
-        <div className="projects-grid">
-          {projects.map((project) => {
+        <>
+          {/* Search bar */}
+          <div className="projects-search-bar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              className="projects-search-input"
+              placeholder={t('projects.searchPlaceholder')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button className="projects-search-clear" onClick={() => setSearch('')}>✕</button>
+            )}
+          </div>
+          <div className="projects-grid">
+            {projects
+              .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase()))
+              .map((project, index) => {
             const color = getProjectColor(project.name);
             const initial = project.name.charAt(0).toUpperCase();
             return (
-              <div key={project.id} className="project-card-wrapper">
+              <div key={project.id} className="project-card-wrapper project-card-animate" style={{ animationDelay: `${index * 60}ms` }}>
                 <Link to={`/projects/${project.slug}`} className="project-card">
                   <div className="project-card-top" style={{ background: color }}>
                     <span className="project-card-initial">{initial}</span>
@@ -195,9 +215,10 @@ export default function Projects() {
                   )}
                 </div>
               </div>
-            );
+            );  
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Create project modal */}

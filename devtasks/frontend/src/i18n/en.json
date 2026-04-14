@@ -20,6 +20,7 @@
     "members": "member",
     "members_plural": "members",
     "noProjects": "No projects yet. Create your first one!",
+    "searchPlaceholder": "Search projects...",
     "delete": "Delete project",
     "deleteTitle": "Delete project",
     "editTitle": "Edit project",
