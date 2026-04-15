@@ -138,7 +138,8 @@ export type NotificationType =
   | 'COMMENT_ADDED'
   | 'TASK_ASSIGNED'
   | 'TASK_UNASSIGNED'
-  | 'TASK_STATUS_CHANGED';
+  | 'TASK_STATUS_CHANGED'
+  | 'MENTION';
 
 export interface Notification {
   id: string;

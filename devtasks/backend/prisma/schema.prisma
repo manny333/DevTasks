@@ -37,6 +37,7 @@ enum NotificationType {
   TASK_ASSIGNED
   TASK_UNASSIGNED
   TASK_STATUS_CHANGED
+  MENTION
 }
 
 // ─── Models ──────────────────────────────────────────────

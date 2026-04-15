@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember } from '../../types';
 import AttachmentDropZone from './AttachmentDropZone';
+import MentionTextarea from './MentionTextarea';
 
 interface TaskModalProps {
   task: Task;
@@ -30,6 +31,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [description, setDescription] = useState(task.description || '');
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
+  const [mentionedUserIds, setMentionedUserIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [sectionMenuOpen, setSectionMenuOpen] = useState(false);
@@ -243,9 +245,13 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const addComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentInput.trim()) return;
-    const res = await api.post(`/tasks/${task.id}/comments`, { content: commentInput });
+    const res = await api.post(`/tasks/${task.id}/comments`, {
+      content: commentInput,
+      mentionedUserIds: Array.from(mentionedUserIds),
+    });
     setComments((prev) => [...prev, res.data]);
     setCommentInput('');
+    setMentionedUserIds(new Set());
   };
 
   const deleteComment = async (commentId: string) => {
@@ -680,10 +686,12 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
           </div>
 
           <form className="comment-form" onSubmit={addComment}>
-            <textarea
-              placeholder={t('comments.placeholder')}
+            <MentionTextarea
               value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value)}
+              onChange={setCommentInput}
+              onMentionsChange={setMentionedUserIds}
+              assignees={assignees}
+              placeholder={t('comments.placeholder')}
               rows={3}
             />
             <button type="submit" className="btn-primary">{t('comments.add')}</button>

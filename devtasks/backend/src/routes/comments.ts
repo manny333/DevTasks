@@ -9,11 +9,16 @@ router.use(authMiddleware);
 // POST /api/tasks/:taskId/comments — create comment
 router.post('/:taskId/comments', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { content } = req.body;
+    const { content, mentionedUserIds } = req.body;
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       res.status(400).json({ error: 'Content is required' });
       return;
     }
+
+    // Validate mentionedUserIds is an array of strings (if provided)
+    const rawMentions: string[] = Array.isArray(mentionedUserIds)
+      ? mentionedUserIds.filter((id) => typeof id === 'string')
+      : [];
 
     const comment = await prisma.comment.create({
       data: {
@@ -32,19 +37,45 @@ router.post('/:taskId/comments', async (req: AuthRequest, res: Response): Promis
         section: { include: { project: { select: { id: true, name: true } } } },
       },
     });
+
     if (task) {
-      const recipientIds = task.assignees
+      const assigneeIds = new Set(task.assignees.map((a) => a.userId));
+
+      // Security: only allow mentions of actual task assignees
+      const validatedMentions = rawMentions.filter(
+        (id) => id !== req.userId && assigneeIds.has(id)
+      );
+      const mentionSet = new Set(validatedMentions);
+
+      // MENTION — direct mentions (highest priority, send first)
+      if (mentionSet.size > 0) {
+        notify({
+          type: 'MENTION',
+          userIds: [...mentionSet],
+          actorName: comment.author.name,
+          taskId: task.id,
+          taskTitle: task.title,
+          projectId: task.section.project.id,
+          projectName: task.section.project.name,
+        });
+      }
+
+      // COMMENT_ADDED — non-mentioned assignees
+      const commentRecipients = task.assignees
         .map((a) => a.userId)
-        .filter((id) => id !== req.userId);
-      notify({
-        type: 'COMMENT_ADDED',
-        userIds: recipientIds,
-        actorName: comment.author.name,
-        taskId: task.id,
-        taskTitle: task.title,
-        projectId: task.section.project.id,
-        projectName: task.section.project.name,
-      });
+        .filter((id) => id !== req.userId && !mentionSet.has(id));
+
+      if (commentRecipients.length > 0) {
+        notify({
+          type: 'COMMENT_ADDED',
+          userIds: commentRecipients,
+          actorName: comment.author.name,
+          taskId: task.id,
+          taskTitle: task.title,
+          projectId: task.section.project.id,
+          projectName: task.section.project.name,
+        });
+      }
     }
 
     res.status(201).json(comment);

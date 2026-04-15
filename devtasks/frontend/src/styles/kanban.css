@@ -436,6 +436,63 @@
 }
 .comment-form textarea:focus { outline: none; border-color: var(--accent); }
 
+/* ─── @Mention MentionTextarea ─────────────────────── */
+.comment-form .mention-textarea-wrap textarea,
+.mention-textarea-wrap textarea {
+  width: 100%;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-tertiary); color: var(--text-primary); font-size: 13px; resize: vertical;
+  box-sizing: border-box;
+}
+.mention-textarea-wrap textarea:focus { outline: none; border-color: var(--accent); }
+
+/* ─── Mention dropdown (portal — fixed) ─────────────── */
+.mention-dropdown {
+  z-index: 9999;
+  background: rgba(27, 40, 64, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(43, 191, 170, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+  padding: 4px;
+  max-width: 320px;
+}
+
+.mention-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px;
+  background: transparent; border: none; border-radius: 8px;
+  cursor: pointer; text-align: left;
+  color: #e2e8f0;
+  transition: background 0.1s;
+}
+.mention-item:hover,
+.mention-item--active { background: rgba(43, 191, 170, 0.18); }
+
+.mention-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  object-fit: cover; flex-shrink: 0;
+}
+.mention-avatar--init {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  background: linear-gradient(135deg, #2bbfaa, #3b82f6);
+  color: #fff;
+}
+
+.mention-name {
+  font-size: 13px; font-weight: 500; color: #e2e8f0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.mention-hint {
+  font-size: 10px; color: rgba(162, 181, 207, 0.55);
+  text-align: center; padding: 4px 8px 2px;
+  letter-spacing: 0.3px;
+}
+
 /* ─── Section nav share button ───────────────────────── */
 .section-nav-share {
   flex-shrink: 0; width: 22px; height: 22px; margin-right: 2px;

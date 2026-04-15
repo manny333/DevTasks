@@ -167,7 +167,8 @@
       "COMMENT_ADDED": "{{actor}} commented on \"{{task}}\"",
       "TASK_ASSIGNED": "{{actor}} assigned you to \"{{task}}\"",
       "TASK_UNASSIGNED": "{{actor}} removed you from \"{{task}}\"",
-      "TASK_STATUS_CHANGED": "{{actor}} moved \"{{task}}\" to {{status}}"
+      "TASK_STATUS_CHANGED": "{{actor}} moved \"{{task}}\" to {{status}}",
+      "MENTION": "{{actor}} mentioned you in \"{{task}}\""
     }
   }
 }
