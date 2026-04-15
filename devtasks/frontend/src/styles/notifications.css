@@ -37,6 +37,26 @@
   to   { transform: scale(1);   opacity: 1; }
 }
 
+/* Bell shake + glow when a new notification arrives */
+@keyframes notif-bell-shake {
+  0%   { transform: rotate(0deg)    scale(1);    filter: drop-shadow(0 0 0px transparent); }
+  10%  { transform: rotate(-20deg)  scale(1.15); filter: drop-shadow(0 0 6px #2bbfaa); }
+  25%  { transform: rotate(18deg)   scale(1.15); filter: drop-shadow(0 0 10px #3b82f6); }
+  40%  { transform: rotate(-14deg)  scale(1.1);  filter: drop-shadow(0 0 8px #2bbfaa); }
+  55%  { transform: rotate(10deg)   scale(1.05); filter: drop-shadow(0 0 6px #3b82f6); }
+  70%  { transform: rotate(-6deg)   scale(1.02); filter: drop-shadow(0 0 4px #2bbfaa); }
+  85%  { transform: rotate(3deg)    scale(1);    filter: drop-shadow(0 0 2px transparent); }
+  100% { transform: rotate(0deg)    scale(1);    filter: drop-shadow(0 0 0px transparent); }
+}
+
+.notif-bell__btn {
+  transform-origin: top center;
+}
+
+.notif-bell--shake {
+  animation: notif-bell-shake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
 /* ─── Panel ─────────────────────────────────────────────── */
 
 .notif-panel {

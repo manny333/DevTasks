@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
@@ -12,9 +12,16 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { t, i18n } = useTranslation();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, newArrived, clearNewArrived } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [bellShake, setBellShake] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
+
+  // Trigger shake animation when a new notification arrives via SSE
+  useEffect(() => {
+    if (!newArrived) return;
+    setBellShake(true);
+  }, [newArrived]);
 
   const toggleLang = () => {
     const next = i18n.language === 'en' ? 'es' : 'en';
@@ -40,9 +47,13 @@ export default function Navbar() {
         {user && (
           <div className="notif-bell" ref={bellRef} style={{ position: 'relative' }}>
             <button
-              className="btn-icon"
+              className={`btn-icon notif-bell__btn${bellShake ? ' notif-bell--shake' : ''}`}
               title={t('notifications.title')}
               onClick={() => setShowNotifications((prev) => !prev)}
+              onAnimationEnd={() => {
+                setBellShake(false);
+                clearNewArrived();
+              }}
             >
               🔔
               {unreadCount > 0 && (

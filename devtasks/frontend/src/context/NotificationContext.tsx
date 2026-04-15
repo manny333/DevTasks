@@ -8,6 +8,8 @@ interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
   loading: boolean;
+  newArrived: boolean;
+  clearNewArrived: () => void;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
   dismiss: (id: string) => Promise<void>;
@@ -23,6 +25,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [newArrived, setNewArrived] = useState(false);
 
   // Initial load of existing notifications from DB
   const loadAll = useCallback(async () => {
@@ -66,6 +69,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const notification: Notification = JSON.parse(event.data);
         setNotifications((prev) => [notification, ...prev]);
         setUnreadCount((prev) => prev + 1);
+        setNewArrived(true);
       } catch {
         // Ignore malformed events
       }
@@ -103,9 +107,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }, [notifications]);
 
+  const clearNewArrived = useCallback(() => setNewArrived(false), []);
+
   return (
     <NotificationContext.Provider
-      value={{ notifications, unreadCount, loading, markRead, markAllRead, dismiss, refresh }}
+      value={{ notifications, unreadCount, loading, newArrived, clearNewArrived, markRead, markAllRead, dismiss, refresh }}
     >
       {children}
     </NotificationContext.Provider>
