@@ -138,6 +138,19 @@
     "search": "Buscar",
     "close": "Cerrar"
   },
+  "notifications": {
+    "title": "Notificaciones",
+    "empty": "¡Estás al día!",
+    "markAllRead": "Marcar todo como leído",
+    "dismiss": "Descartar",
+    "unknownTask": "una tarea",
+    "types": {
+      "COMMENT_ADDED": "{{actor}} comentó en \"{{task}}\"",
+      "TASK_ASSIGNED": "{{actor}} te asignó a \"{{task}}\"",
+      "TASK_UNASSIGNED": "{{actor}} te quitó de \"{{task}}\"",
+      "TASK_STATUS_CHANGED": "{{actor}} movió \"{{task}}\" a {{status}}"
+    }
+  },
   "members": {
     "title": "Miembros",
     "owner": "Propietario",

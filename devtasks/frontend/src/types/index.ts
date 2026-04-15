@@ -133,3 +133,22 @@ export interface TaskTemplate {
   sectionId: string | null;
   createdAt: string;
 }
+
+export type NotificationType =
+  | 'COMMENT_ADDED'
+  | 'TASK_ASSIGNED'
+  | 'TASK_UNASSIGNED'
+  | 'TASK_STATUS_CHANGED';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  read: boolean;
+  createdAt: string;
+  actorName: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  meta: Record<string, unknown> | null;
+}

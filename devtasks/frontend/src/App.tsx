@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Navbar from './components/Layout/Navbar';
 import Login from './pages/Login';
@@ -34,6 +35,7 @@ export default function App() {
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <ThemeProvider>
         <AuthProvider>
+          <NotificationProvider>
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
@@ -63,6 +65,7 @@ export default function App() {
               />
             </Routes>
           </BrowserRouter>
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>

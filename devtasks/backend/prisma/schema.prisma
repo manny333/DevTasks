@@ -32,6 +32,13 @@ enum AccessType {
   VIEWER  // Read-only
 }
 
+enum NotificationType {
+  COMMENT_ADDED
+  TASK_ASSIGNED
+  TASK_UNASSIGNED
+  TASK_STATUS_CHANGED
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -47,6 +54,7 @@ model User {
   sectionAccess    SectionMember[]
   taskAssignments  TaskAssignee[]
   comments         Comment[]
+  notifications    Notification[]   @relation("UserNotifications")
 }
 
 model Project {
@@ -201,4 +209,23 @@ model TaskTemplate {
 
   sectionId String?
   section   Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  type        NotificationType
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  // Recipient
+  userId String
+  user   User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Context stored at creation time (denormalized so it survives deletions)
+  actorName   String
+  taskId      String?
+  taskTitle   String?
+  projectId   String?
+  projectName String?
+  meta        Json?    // e.g. { newStatus: "DONE" } for status changes
 }

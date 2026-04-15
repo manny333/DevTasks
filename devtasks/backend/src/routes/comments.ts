@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { notify } from '../lib/notify';
 
 const router = Router();
 router.use(authMiddleware);
@@ -22,6 +23,30 @@ router.post('/:taskId/comments', async (req: AuthRequest, res: Response): Promis
       },
       include: { author: { select: { id: true, name: true, avatar: true } } },
     });
+
+    // Notify task assignees (except the commenter)
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.taskId as string },
+      include: {
+        assignees: { select: { userId: true } },
+        section: { include: { project: { select: { id: true, name: true } } } },
+      },
+    });
+    if (task) {
+      const recipientIds = task.assignees
+        .map((a) => a.userId)
+        .filter((id) => id !== req.userId);
+      notify({
+        type: 'COMMENT_ADDED',
+        userIds: recipientIds,
+        actorName: comment.author.name,
+        taskId: task.id,
+        taskTitle: task.title,
+        projectId: task.section.project.id,
+        projectName: task.section.project.name,
+      });
+    }
+
     res.status(201).json(comment);
   } catch (error) {
     console.error('Create comment error:', error);

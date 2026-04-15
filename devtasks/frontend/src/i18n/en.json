@@ -156,5 +156,18 @@
       "editor": "Editor",
       "viewer": "Viewer"
     }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "You're all caught up!",
+    "markAllRead": "Mark all as read",
+    "dismiss": "Dismiss",
+    "unknownTask": "a task",
+    "types": {
+      "COMMENT_ADDED": "{{actor}} commented on \"{{task}}\"",
+      "TASK_ASSIGNED": "{{actor}} assigned you to \"{{task}}\"",
+      "TASK_UNASSIGNED": "{{actor}} removed you from \"{{task}}\"",
+      "TASK_STATUS_CHANGED": "{{actor}} moved \"{{task}}\" to {{status}}"
+    }
   }
 }

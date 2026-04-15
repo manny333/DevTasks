@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { requireTaskAccess, getSectionAccess, canEdit } from '../lib/access';
+import { notify } from '../lib/notify';
 
 const router = Router();
 router.use(authMiddleware);
@@ -37,7 +38,13 @@ router.patch('/:id/move', async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const task = await prisma.task.findUnique({ where: { id: req.params.id as string } });
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      include: {
+        assignees: { select: { userId: true } },
+        section: { include: { project: { select: { id: true, name: true } } } },
+      },
+    });
     if (!task) {
       res.status(404).json({ error: 'Task not found' });
       return;
@@ -59,6 +66,23 @@ router.patch('/:id/move', async (req: AuthRequest, res: Response): Promise<void>
       data: { status, position },
       include: { tags: { include: { tag: true } }, _count: { select: { comments: true } } },
     });
+
+    // Notify assignees about status change (skip if status didn't change)
+    if (task.status !== status) {
+      const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+      const recipientIds = task.assignees.map((a) => a.userId).filter((id) => id !== req.userId);
+      notify({
+        type: 'TASK_STATUS_CHANGED',
+        userIds: recipientIds,
+        actorName: actor?.name ?? 'Someone',
+        taskId: task.id,
+        taskTitle: task.title,
+        projectId: task.section.project.id,
+        projectName: task.section.project.name,
+        meta: { newStatus: status },
+      });
+    }
+
     res.json(updated);
   } catch (error) {
     console.error('Move task error:', error);
@@ -185,6 +209,25 @@ router.post('/:id/assignees', async (req: AuthRequest, res: Response): Promise<v
       data: { taskId: req.params.id as string, userId: user.id, accessType },
       include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
     });
+
+    // Notify the newly assigned user (unless they assigned themselves)
+    if (user.id !== req.userId) {
+      const task = await prisma.task.findUnique({
+        where: { id: req.params.id as string },
+        include: { section: { include: { project: { select: { id: true, name: true } } } } },
+      });
+      const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+      notify({
+        type: 'TASK_ASSIGNED',
+        userIds: [user.id],
+        actorName: actor?.name ?? 'Someone',
+        taskId: req.params.id as string,
+        taskTitle: task?.title,
+        projectId: task?.section.project.id,
+        projectName: task?.section.project.name,
+      });
+    }
+
     res.status(201).json(assignee);
   } catch (error) {
     console.error('Add assignee error:', error);
@@ -228,9 +271,31 @@ router.patch('/:id/assignees/:userId', async (req: AuthRequest, res: Response): 
 // DELETE /api/tasks/:id/assignees/:userId — remove task assignee
 router.delete('/:id/assignees/:userId', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const removedUserId = req.params.userId as string;
+    const taskId = req.params.id as string;
+
     await prisma.taskAssignee.delete({
-      where: { taskId_userId: { taskId: req.params.id as string, userId: req.params.userId as string } },
+      where: { taskId_userId: { taskId, userId: removedUserId } },
     });
+
+    // Notify the removed user (unless they removed themselves)
+    if (removedUserId !== req.userId) {
+      const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        include: { section: { include: { project: { select: { id: true, name: true } } } } },
+      });
+      const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+      notify({
+        type: 'TASK_UNASSIGNED',
+        userIds: [removedUserId],
+        actorName: actor?.name ?? 'Someone',
+        taskId,
+        taskTitle: task?.title,
+        projectId: task?.section.project.id,
+        projectName: task?.section.project.name,
+      });
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error('Remove assignee error:', error);
