@@ -69,12 +69,21 @@
     "archive": "Archivar",
     "unarchive": "Desarchivar",
     "showArchived": "Mostrar archivadas",
+    "columnOptions": "Opciones de columna",
+    "archiveAllInStatus": "Archivar todas de {{status}}",
     "advance": "Pasar a la siguiente etapa",
     "moveTo": "Mover a sección",
     "useTemplate": "Usar plantilla",
     "blankTask": "Tarea en blanco",
     "titlePlaceholder": "Título de la tarea...",
     "statusLabel": "Estado",
+    "dueDate": "Fecha límite",
+    "dueDateLabel": "Vence: {{date}}",
+    "due": {
+      "overdue": "Vencida",
+      "today": "Vence hoy",
+      "soon": "Próxima a vencer"
+    },
     "createAction": "Crear Tarea",
     "assignMember": "Asignar miembro",
     "autosave": {

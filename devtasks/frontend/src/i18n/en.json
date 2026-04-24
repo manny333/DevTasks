@@ -69,12 +69,21 @@
     "archive": "Archive",
     "unarchive": "Unarchive",
     "showArchived": "Show archived",
+    "columnOptions": "Column options",
+    "archiveAllInStatus": "Archive all in {{status}}",
     "advance": "Advance to next stage",
     "moveTo": "Move to section",
     "useTemplate": "Use template",
     "blankTask": "Blank task",
     "titlePlaceholder": "Task title...",
     "statusLabel": "Status",
+    "dueDate": "Due date",
+    "dueDateLabel": "Due: {{date}}",
+    "due": {
+      "overdue": "Overdue",
+      "today": "Due today",
+      "soon": "Due soon"
+    },
     "createAction": "Create Task",
     "assignMember": "Assign member",
     "autosave": {

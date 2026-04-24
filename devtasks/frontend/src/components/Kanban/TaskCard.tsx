@@ -69,6 +69,22 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
     opacity: isSortDragging ? 0.4 : 1,
   };
 
+  const dueInfo = (() => {
+    if (!task.dueDate) return null;
+    const due = new Date(task.dueDate);
+    if (Number.isNaN(due.getTime())) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDay = new Date(due);
+    dueDay.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (task.archived) return { tone: 'neutral', label: t('tasks.dueDateLabel', { date: dueDay.toLocaleDateString() }) };
+    if (diffDays < 0) return { tone: 'overdue', label: t('tasks.due.overdue') };
+    if (diffDays === 0) return { tone: 'today', label: t('tasks.due.today') };
+    if (diffDays <= 2) return { tone: 'soon', label: t('tasks.due.soon') };
+    return { tone: 'neutral', label: t('tasks.dueDateLabel', { date: dueDay.toLocaleDateString() }) };
+  })();
+
   return (
     <div
       ref={setNodeRef}
@@ -171,6 +187,11 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
       )}
 
       <div className="task-card-footer">
+        {dueInfo && (
+          <span className={`task-card-due task-card-due-${dueInfo.tone}`} title={task.dueDate ? new Date(task.dueDate).toLocaleDateString() : ''}>
+            {dueInfo.label}
+          </span>
+        )}
         {task._count.comments > 0 && (
           <span className="task-card-comments">💬 {task._count.comments}</span>
         )}

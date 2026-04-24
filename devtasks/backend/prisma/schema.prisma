@@ -124,6 +124,7 @@ model Task {
   id          String     @id @default(cuid())
   title       String
   description String?
+  dueDate     DateTime?
   status      TaskStatus @default(TODO)
   archived    Boolean    @default(false)
   position    Int        @default(0)

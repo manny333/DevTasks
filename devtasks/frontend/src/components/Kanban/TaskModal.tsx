@@ -29,6 +29,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
+  const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '');
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [mentionedUserIds, setMentionedUserIds] = useState<Set<string>>(new Set());
@@ -109,8 +110,9 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   useEffect(() => {
     setTitle(task.title);
     setDescription(task.description || '');
+    setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
     setSaveState('idle');
-  }, [task.id, task.title, task.description]);
+  }, [task.id, task.title, task.description, task.dueDate]);
 
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
@@ -201,7 +203,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     };
   }, []);
 
-  const persistTask = async (payload: { title?: string; description?: string }) => {
+  const persistTask = async (payload: { title?: string; description?: string; dueDate?: string | null }) => {
     setSaveState('saving');
     try {
       const res = await api.patch(`/tasks/${task.id}`, payload);
@@ -218,11 +220,15 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
 
   useEffect(() => {
     if (!editing || !canEdit) return;
-    if (title === task.title && description === (task.description || '')) return;
+    if (title === task.title && description === (task.description || '') && dueDate === (task.dueDate ? task.dueDate.slice(0, 10) : '')) return;
 
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
-      void persistTask({ title: title.trim(), description: description.trim() || '' });
+      void persistTask({
+        title: title.trim(),
+        description: description.trim() || '',
+        dueDate: dueDate || null,
+      });
     }, 700);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, editing, canEdit, task.id]);
@@ -230,7 +236,11 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const save = async () => {
     setSaving(true);
     try {
-      await persistTask({ title: title.trim(), description: description.trim() || '' });
+      await persistTask({
+        title: title.trim(),
+        description: description.trim() || '',
+        dueDate: dueDate || null,
+      });
       setEditing(false);
     } finally {
       setSaving(false);
@@ -353,6 +363,17 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
 
         {/* Description */}
         <div className="task-modal-section">
+          <div className="task-modal-due-row">
+            <label htmlFor="task-due-date" className="task-modal-due-label">{t('tasks.dueDate')}</label>
+            <input
+              id="task-due-date"
+              className="task-modal-due-input"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              disabled={!canEdit}
+            />
+          </div>
           {editing ? (
             <textarea
               className="task-modal-desc-input"

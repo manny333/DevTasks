@@ -13,13 +13,22 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
     if (!access) { res.status(403).json({ error: 'No access to this section' }); return; }
     if (!canEdit(access)) { res.status(403).json({ error: 'You have read-only access' }); return; }
 
-    const { title, description, status } = req.body;
+    const { title, description, status, dueDate } = req.body;
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       res.status(400).json({ error: 'Title is required' });
       return;
     }
 
     const targetStatus = status || 'TODO';
+    let normalizedDueDate: Date | null = null;
+    if (dueDate !== undefined && dueDate !== null && `${dueDate}`.trim() !== '') {
+      const parsed = new Date(dueDate);
+      if (Number.isNaN(parsed.getTime())) {
+        res.status(400).json({ error: 'Invalid dueDate' });
+        return;
+      }
+      normalizedDueDate = parsed;
+    }
 
     const last = await prisma.task.findFirst({
       where: { sectionId: req.params.sectionId as string, status: targetStatus },
@@ -30,6 +39,7 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
       data: {
         title: title.trim(),
         description: description || null,
+        dueDate: normalizedDueDate,
         status: targetStatus,
         position: (last?.position ?? -1) + 1,
         sectionId: req.params.sectionId as string,
@@ -62,6 +72,35 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
     res.json(tasks);
   } catch (error) {
     console.error('List tasks error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/sections/:sectionId/tasks/archive-by-status
+router.patch('/:sectionId/tasks/archive-by-status', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const access = await getSectionAccess(req.userId!, req.params.sectionId as string);
+    if (!access) { res.status(403).json({ error: 'No access to this section' }); return; }
+    if (!canEdit(access)) { res.status(403).json({ error: 'You have read-only access' }); return; }
+
+    const { status } = req.body;
+    if (!status || !['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].includes(status)) {
+      res.status(400).json({ error: 'Valid status is required' });
+      return;
+    }
+
+    const result = await prisma.task.updateMany({
+      where: {
+        sectionId: req.params.sectionId as string,
+        status,
+        archived: false,
+      },
+      data: { archived: true },
+    });
+
+    res.json({ success: true, archivedCount: result.count });
+  } catch (error) {
+    console.error('Archive tasks by status error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

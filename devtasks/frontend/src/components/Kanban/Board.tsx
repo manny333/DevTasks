@@ -179,6 +179,11 @@ export default function Board({ section, projectTags, allSections, projectMember
     updateTask({ ...task, archived: res.data.archived });
   };
 
+  const archiveTasksByStatus = async (status: TaskStatus) => {
+    await api.patch(`/sections/${section.id}/tasks/archive-by-status`, { status });
+    fetchTasks();
+  };
+
   const deleteTask = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -267,6 +272,7 @@ export default function Board({ section, projectTags, allSections, projectMember
             allSections={allSections}
             onMoveSection={handleMoveSection}
             onArchive={archiveTask}
+            onArchiveByStatus={archiveTasksByStatus}
           />
         </div>
       ) : (
@@ -284,6 +290,7 @@ export default function Board({ section, projectTags, allSections, projectMember
                 allSections={allSections}
                 onMoveSection={handleMoveSection}
                 onArchive={archiveTask}
+                onArchiveByStatus={archiveTasksByStatus}
                 showPlaceholder={activeTask !== null && overColumnStatus === status && activeTask.status !== status}
               />
             ))}

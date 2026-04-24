@@ -27,6 +27,7 @@ export default function CreateTaskModal({
   const titleRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(defaultTitle);
   const [description, setDescription] = useState(defaultDescription);
+  const [dueDate, setDueDate] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -58,6 +59,7 @@ export default function CreateTaskModal({
         title: title.trim(),
         status: defaultStatus,
         description: description.trim() || undefined,
+        dueDate: dueDate || undefined,
       });
       const task: Task = res.data;
       // Attach selected tags
@@ -109,6 +111,17 @@ export default function CreateTaskModal({
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
           />
+
+          {/* Tags */}
+          <div className="create-task-field">
+            <span className="create-task-field-label">{t('tasks.dueDate')}</span>
+            <input
+              className="create-task-date-input"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
 
           {/* Tags */}
           {projectTags.length > 0 && (

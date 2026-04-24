@@ -11,13 +11,27 @@ router.use(authMiddleware);
 router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!await requireTaskAccess(req, res)) return;
-    const { title, description } = req.body;
+    const { title, description, dueDate } = req.body;
+    let normalizedDueDate: Date | null | undefined = undefined;
+    if (dueDate !== undefined) {
+      if (dueDate === null || `${dueDate}`.trim() === '') {
+        normalizedDueDate = null;
+      } else {
+        const parsed = new Date(dueDate);
+        if (Number.isNaN(parsed.getTime())) {
+          res.status(400).json({ error: 'Invalid dueDate' });
+          return;
+        }
+        normalizedDueDate = parsed;
+      }
+    }
 
     const updated = await prisma.task.update({
       where: { id: req.params.id as string },
       data: {
         ...(title && { title: title.trim() }),
         ...(description !== undefined && { description }),
+        ...(normalizedDueDate !== undefined && { dueDate: normalizedDueDate }),
       },
       include: { tags: { include: { tag: true } }, assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } }, _count: { select: { comments: true } } },
     });
