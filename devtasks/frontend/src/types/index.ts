@@ -32,6 +32,16 @@ export interface TaskAttachment {
   url: string;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+  position: number;
+  taskId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -45,7 +55,8 @@ export interface Task {
   updatedAt: string;
   tags: TaskTag[];
   assignees?: TaskAssignee[];
-  _count: { comments: number };
+  subtasks?: Subtask[];
+  _count: { comments: number; subtasks?: number };
 }
 
 export interface Section {

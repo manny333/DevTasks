@@ -306,7 +306,7 @@
 .task-card-desc em { font-style: italic; }
 .task-card-desc code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; background: var(--bg-tertiary); padding: 1px 4px; border-radius: 3px; }
 .task-card-desc del { opacity: 0.5; }
-.task-card-footer { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.task-card-footer { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; justify-content: space-between; }
 .task-card-comments { font-size: 11px; color: var(--text-muted); margin-left: auto; }
 .task-card-due {
   font-size: 10px;
@@ -339,7 +339,6 @@
 /* Avatar stack on cards */
 .task-card-assignees {
   display: flex; flex-direction: row-reverse; align-items: center;
-  margin-left: auto;
 }
 .task-card-avatar {
   width: 22px; height: 22px; border-radius: 50%;
@@ -409,6 +408,7 @@
 .task-drawer .task-modal-actions      { padding-top: 12px; padding-bottom: 4px; }
 .task-drawer .task-modal-assignees    { padding-top: 16px; }
 .task-drawer .task-modal-attachments  { padding-top: 16px; }
+.task-drawer .task-modal-subtasks     { padding-top: 16px; }
 .task-drawer .task-modal-comments     { padding-top: 20px; padding-bottom: 32px; }
 
 .task-modal-header { display: flex; align-items: flex-start; gap: 8px; }
@@ -943,6 +943,129 @@ a.attachment-name:hover { color: var(--accent); }
 }
 .attachment-dropzone-sub {
   font-size: 11px; color: var(--text-muted);
+}
+
+/* ─── Subtasks / Checklist (TaskModal) ─────────────────────────── */
+.task-modal-subtasks {
+  display: flex; flex-direction: column; gap: 10px;
+  border-top: 1px solid var(--border); padding-top: 16px;
+}
+.task-modal-subtasks-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.task-modal-subtasks-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; margin: 0;
+}
+.task-modal-subtasks-pct {
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+}
+.task-subtasks-progress-track {
+  height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden;
+}
+.task-subtasks-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 2px; transition: width 0.35s ease;
+}
+.task-subtasks-list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.task-subtask-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 6px; border-radius: 7px;
+  transition: background 0.1s;
+}
+.task-subtask-item:hover { background: var(--bg-tertiary); }
+.task-subtask-item.completed .task-subtask-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+.task-subtask-checkbox {
+  position: relative; display: flex; flex-shrink: 0;
+  width: 16px; height: 16px; cursor: pointer;
+}
+.task-subtask-checkbox input {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0;
+}
+.task-subtask-checkbox input:disabled { cursor: not-allowed; }
+.task-subtask-checkbox-custom {
+  width: 16px; height: 16px; border-radius: 5px;
+  border: 1.5px solid var(--border);
+  background: var(--bg-primary);
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, border-color 0.12s;
+}
+.task-subtask-checkbox-custom svg {
+  width: 10px; height: 10px; color: #fff; opacity: 0;
+  transition: opacity 0.1s;
+}
+.task-subtask-checkbox:hover .task-subtask-checkbox-custom {
+  border-color: var(--accent);
+}
+.task-subtask-checkbox input:checked + .task-subtask-checkbox-custom {
+  background: #22c55e; border-color: #22c55e;
+}
+.task-subtask-checkbox input:checked + .task-subtask-checkbox-custom svg {
+  opacity: 1;
+}
+.task-subtask-title {
+  flex: 1; font-size: 13px; line-height: 1.4;
+  color: var(--text-primary); cursor: text;
+  word-break: break-word;
+}
+.task-subtask-title-input {
+  flex: 1; font-size: 13px; line-height: 1.4;
+  padding: 3px 6px; border-radius: 6px;
+  border: 1px solid var(--accent); outline: none;
+  background: var(--bg-tertiary); color: var(--text-primary);
+  font-family: inherit;
+}
+.task-subtask-delete {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 5px;
+  border: none; background: transparent; cursor: pointer;
+  color: var(--text-muted); font-size: 15px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.12s, background 0.12s, color 0.12s;
+  padding: 0;
+}
+.task-subtask-item:hover .task-subtask-delete { opacity: 1; }
+.task-subtask-delete:hover { background: var(--bg-secondary); color: var(--danger, #ef4444); }
+.task-subtask-add-form {
+  display: flex; align-items: center; gap: 8px; margin-top: 2px;
+}
+.task-subtask-add-input {
+  flex: 1; padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-tertiary); color: var(--text-primary);
+  font-size: 13px; outline: none;
+}
+.task-subtask-add-input:focus { border-color: var(--accent); }
+.task-subtask-add-btn {
+  padding: 7px 14px; border: none; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: opacity 0.12s, transform 0.1s;
+}
+.task-subtask-add-btn:hover:not(:disabled) { opacity: 0.9; }
+.task-subtask-add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ─── Subtasks indicator on TaskCard ─────────────────────────── */
+.task-card-subtasks {
+  display: flex; flex-direction: column; gap: 3px;
+  margin-top: 2px;
+}
+.task-card-subtasks-meta {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 600; color: var(--text-muted);
+}
+.task-card-subtasks-meta svg { flex-shrink: 0; }
+.task-card-subtasks-progress {
+  height: 3px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden;
+}
+.task-card-subtasks-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 2px; transition: width 0.35s ease;
 }
 
 /* ─── Board Responsive ─────────────────────────────────────────── */

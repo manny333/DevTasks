@@ -44,7 +44,11 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
         position: (last?.position ?? -1) + 1,
         sectionId: req.params.sectionId as string,
       },
-      include: { tags: { include: { tag: true } }, _count: { select: { comments: true } } },
+      include: {
+        tags: { include: { tag: true } },
+        subtasks: { orderBy: { position: 'asc' } },
+        _count: { select: { comments: true, subtasks: true } },
+      },
     });
     res.status(201).json(task);
   } catch (error) {
@@ -65,7 +69,8 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
       include: {
         tags: { include: { tag: true } },
         assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
-        _count: { select: { comments: true } },
+        subtasks: { orderBy: { position: 'asc' } },
+        _count: { select: { comments: true, subtasks: true } },
       },
       orderBy: { position: 'asc' },
     });

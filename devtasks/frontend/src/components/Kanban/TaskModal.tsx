@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember } from '../../types';
+import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember, Subtask } from '../../types';
 import AttachmentDropZone from './AttachmentDropZone';
 import MentionTextarea from './MentionTextarea';
 
@@ -56,6 +56,12 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [attachmentView, setAttachmentView] = useState<'grid' | 'list'>('grid');
   const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null);
+
+  const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks ?? []);
+  const [subtaskInput, setSubtaskInput] = useState('');
+  const [subtaskAdding, setSubtaskAdding] = useState(false);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState('');
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -106,6 +112,84 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   useEffect(() => {
     api.get(`/tasks/${task.id}/attachments`).then((res) => setAttachments(res.data));
   }, [task.id]);
+
+  useEffect(() => {
+    api.get(`/tasks/${task.id}/subtasks`).then((res) => setSubtasks(res.data)).catch(() => { /* ignore */ });
+  }, [task.id]);
+
+  const syncSubtasksCount = (list: Subtask[]) => {
+    const completed = list.filter((s) => s.completed).length;
+    onUpdate({
+      ...task,
+      subtasks: list,
+      _count: { ...task._count, subtasks: list.length },
+      // stash completed count on private field? keep in _count ok — TaskCard derives from list
+    });
+    void completed;
+  };
+
+  const addSubtask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const title = subtaskInput.trim();
+    if (!title || subtaskAdding) return;
+    setSubtaskAdding(true);
+    try {
+      const res = await api.post(`/tasks/${task.id}/subtasks`, { title });
+      const next = [...subtasks, res.data];
+      setSubtasks(next);
+      syncSubtasksCount(next);
+      setSubtaskInput('');
+    } catch { /* ignore */ } finally {
+      setSubtaskAdding(false);
+    }
+  };
+
+  const toggleSubtask = async (subtask: Subtask) => {
+    const optimistic = subtasks.map((s) => s.id === subtask.id ? { ...s, completed: !s.completed } : s);
+    setSubtasks(optimistic);
+    syncSubtasksCount(optimistic);
+    try {
+      const res = await api.patch(`/tasks/${task.id}/subtasks/${subtask.id}`, { completed: !subtask.completed });
+      const next = subtasks.map((s) => s.id === subtask.id ? res.data : s);
+      // use latest server state
+      setSubtasks((curr) => curr.map((s) => s.id === res.data.id ? res.data : s));
+      syncSubtasksCount(next);
+    } catch {
+      // revert
+      setSubtasks(subtasks);
+      syncSubtasksCount(subtasks);
+    }
+  };
+
+  const saveSubtaskTitle = async (subtaskId: string) => {
+    const title = editingSubtaskTitle.trim();
+    if (!title) { setEditingSubtaskId(null); return; }
+    try {
+      const res = await api.patch(`/tasks/${task.id}/subtasks/${subtaskId}`, { title });
+      const next = subtasks.map((s) => s.id === subtaskId ? res.data : s);
+      setSubtasks(next);
+      syncSubtasksCount(next);
+    } catch { /* ignore */ } finally {
+      setEditingSubtaskId(null);
+      setEditingSubtaskTitle('');
+    }
+  };
+
+  const deleteSubtask = async (subtaskId: string) => {
+    const next = subtasks.filter((s) => s.id !== subtaskId);
+    setSubtasks(next);
+    syncSubtasksCount(next);
+    try {
+      await api.delete(`/tasks/${task.id}/subtasks/${subtaskId}`);
+    } catch { /* ignore */ }
+  };
+
+  const subtaskStats = (() => {
+    const total = subtasks.length;
+    const done = subtasks.filter((s) => s.completed).length;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+    return { total, done, pct };
+  })();
 
   useEffect(() => {
     setTitle(task.title);
@@ -676,6 +760,103 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               onFiles={handleFiles}
               uploading={attachmentUploading}
             />
+          )}
+        </div>
+
+        {/* Subtasks / Checklist */}
+        <div className="task-modal-subtasks">
+          <div className="task-modal-subtasks-header">
+            <h3 className="task-modal-subtasks-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 11 12 14 22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              {t('subtasks.title')}
+              {subtaskStats.total > 0 && (
+                <span className="attachment-count">{subtaskStats.done}/{subtaskStats.total}</span>
+              )}
+            </h3>
+            {subtaskStats.total > 0 && (
+              <span className="task-modal-subtasks-pct">{subtaskStats.pct}%</span>
+            )}
+          </div>
+
+          {subtaskStats.total > 0 && (
+            <div className="task-subtasks-progress-track">
+              <div
+                className="task-subtasks-progress-fill"
+                style={{ width: `${subtaskStats.pct}%` }}
+              />
+            </div>
+          )}
+
+          {subtasks.length > 0 && (
+            <ul className="task-subtasks-list">
+              {subtasks.map((s) => (
+                <li key={s.id} className={`task-subtask-item${s.completed ? ' completed' : ''}`}>
+                  <label className="task-subtask-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={s.completed}
+                      disabled={!canEdit}
+                      onChange={() => toggleSubtask(s)}
+                    />
+                    <span className="task-subtask-checkbox-custom" aria-hidden>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </span>
+                  </label>
+                  {editingSubtaskId === s.id ? (
+                    <input
+                      className="task-subtask-title-input"
+                      value={editingSubtaskTitle}
+                      autoFocus
+                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                      onBlur={() => saveSubtaskTitle(s.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); saveSubtaskTitle(s.id); }
+                        if (e.key === 'Escape') { setEditingSubtaskId(null); setEditingSubtaskTitle(''); }
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="task-subtask-title"
+                      onClick={() => {
+                        if (!canEdit) return;
+                        setEditingSubtaskId(s.id);
+                        setEditingSubtaskTitle(s.title);
+                      }}
+                    >{s.title}</span>
+                  )}
+                  {canEdit && (
+                    <button
+                      className="task-subtask-delete"
+                      title={t('subtasks.delete')}
+                      onClick={() => deleteSubtask(s.id)}
+                    >×</button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {canEdit && (
+            <form className="task-subtask-add-form" onSubmit={addSubtask}>
+              <input
+                type="text"
+                className="task-subtask-add-input"
+                placeholder={t('subtasks.placeholder')}
+                value={subtaskInput}
+                onChange={(e) => setSubtaskInput(e.target.value)}
+                disabled={subtaskAdding}
+              />
+              <button
+                type="submit"
+                className="task-subtask-add-btn"
+                disabled={!subtaskInput.trim() || subtaskAdding}
+              >{t('subtasks.add')}</button>
+            </form>
           )}
         </div>
 

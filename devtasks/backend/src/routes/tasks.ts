@@ -33,7 +33,12 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
         ...(description !== undefined && { description }),
         ...(normalizedDueDate !== undefined && { dueDate: normalizedDueDate }),
       },
-      include: { tags: { include: { tag: true } }, assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } }, _count: { select: { comments: true } } },
+      include: {
+        tags: { include: { tag: true } },
+        assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
+        subtasks: { orderBy: { position: 'asc' } },
+        _count: { select: { comments: true, subtasks: true } },
+      },
     });
     res.json(updated);
   } catch (error) {
@@ -78,7 +83,11 @@ router.patch('/:id/move', async (req: AuthRequest, res: Response): Promise<void>
     const updated = await prisma.task.update({
       where: { id: req.params.id as string },
       data: { status, position },
-      include: { tags: { include: { tag: true } }, _count: { select: { comments: true } } },
+      include: {
+        tags: { include: { tag: true } },
+        subtasks: { orderBy: { position: 'asc' } },
+        _count: { select: { comments: true, subtasks: true } },
+      },
     });
 
     // Notify assignees about status change (skip if status didn't change)
@@ -126,7 +135,11 @@ router.patch('/:id/move-section', async (req: AuthRequest, res: Response): Promi
     const updated = await prisma.task.update({
       where: { id: req.params.id as string },
       data: { sectionId, position: count },
-      include: { tags: { include: { tag: true } }, _count: { select: { comments: true } } },
+      include: {
+        tags: { include: { tag: true } },
+        subtasks: { orderBy: { position: 'asc' } },
+        _count: { select: { comments: true, subtasks: true } },
+      },
     });
     res.json(updated);
   } catch (error) {
@@ -151,6 +164,104 @@ router.patch('/:id/archive', async (req: AuthRequest, res: Response): Promise<vo
     res.json(updated);
   } catch (error) {
     console.error('Archive task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Subtasks ──────────────────────────────────────────
+
+// GET /api/tasks/:id/subtasks — list task subtasks
+router.get('/:id/subtasks', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res, false)) return;
+    const subtasks = await prisma.subtask.findMany({
+      where: { taskId: req.params.id as string },
+      orderBy: { position: 'asc' },
+    });
+    res.json(subtasks);
+  } catch (error) {
+    console.error('List subtasks error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/tasks/:id/subtasks — create subtask
+router.post('/:id/subtasks', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+    const { title } = req.body;
+    if (!title || typeof title !== 'string' || title.trim().length === 0) {
+      res.status(400).json({ error: 'Title is required' });
+      return;
+    }
+
+    const last = await prisma.subtask.findFirst({
+      where: { taskId: req.params.id as string },
+      orderBy: { position: 'desc' },
+    });
+
+    const subtask = await prisma.subtask.create({
+      data: {
+        title: title.trim(),
+        position: (last?.position ?? -1) + 1,
+        taskId: req.params.id as string,
+      },
+    });
+    res.status(201).json(subtask);
+  } catch (error) {
+    console.error('Create subtask error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/tasks/:id/subtasks/:subtaskId — update subtask
+router.patch('/:id/subtasks/:subtaskId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+    const { title, completed, position } = req.body;
+
+    const existing = await prisma.subtask.findUnique({
+      where: { id: req.params.subtaskId as string },
+    });
+    if (!existing || existing.taskId !== req.params.id) {
+      res.status(404).json({ error: 'Subtask not found' });
+      return;
+    }
+
+    const updated = await prisma.subtask.update({
+      where: { id: req.params.subtaskId as string },
+      data: {
+        ...(title !== undefined && typeof title === 'string' && title.trim().length > 0 && { title: title.trim() }),
+        ...(typeof completed === 'boolean' && { completed }),
+        ...(typeof position === 'number' && { position }),
+      },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error('Update subtask error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/tasks/:id/subtasks/:subtaskId — delete subtask
+router.delete('/:id/subtasks/:subtaskId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+
+    const existing = await prisma.subtask.findUnique({
+      where: { id: req.params.subtaskId as string },
+    });
+    if (!existing || existing.taskId !== req.params.id) {
+      res.status(404).json({ error: 'Subtask not found' });
+      return;
+    }
+
+    await prisma.subtask.delete({
+      where: { id: req.params.subtaskId as string },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete subtask error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

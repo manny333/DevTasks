@@ -138,6 +138,19 @@ model Task {
   tags        TaskTag[]
   assignees   TaskAssignee[]
   attachments TaskAttachment[]
+  subtasks    Subtask[]
+}
+
+model Subtask {
+  id        String   @id @default(cuid())
+  title     String
+  completed Boolean  @default(false)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model TaskAttachment {

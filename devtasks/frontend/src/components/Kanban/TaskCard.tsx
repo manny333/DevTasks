@@ -186,6 +186,27 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
         </div>
       )}
 
+      {(() => {
+        const total = task.subtasks?.length ?? task._count.subtasks ?? 0;
+        if (total === 0) return null;
+        const done = (task.subtasks ?? []).filter((s) => s.completed).length;
+        const pct = Math.round((done / total) * 100);
+        return (
+          <div className="task-card-subtasks" title={`${done}/${total}`}>
+            <div className="task-card-subtasks-meta">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 11 12 14 22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              <span>{done}/{total}</span>
+            </div>
+            <div className="task-card-subtasks-progress">
+              <div className="task-card-subtasks-progress-fill" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="task-card-footer">
         {dueInfo && (
           <span className={`task-card-due task-card-due-${dueInfo.tone}`} title={task.dueDate ? new Date(task.dueDate).toLocaleDateString() : ''}>

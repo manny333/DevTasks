@@ -92,6 +92,14 @@
       "error": "Could not save"
     }
   },
+  "subtasks": {
+    "title": "Checklist",
+    "add": "Add",
+    "placeholder": "Add a subtask…",
+    "delete": "Delete subtask",
+    "progress": "{{done}} of {{total}} completed",
+    "empty": "No subtasks yet. Break this task down into smaller steps."
+  },
   "attachments": {
     "title": "Attachments",
     "upload": "Attach file",

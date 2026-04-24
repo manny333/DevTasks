@@ -92,6 +92,14 @@
       "error": "No se pudo guardar"
     }
   },
+  "subtasks": {
+    "title": "Lista de verificación",
+    "add": "Agregar",
+    "placeholder": "Agregar subtarea…",
+    "delete": "Eliminar subtarea",
+    "progress": "{{done}} de {{total}} completadas",
+    "empty": "Sin subtareas aún. Divide esta tarea en pasos más pequeños."
+  },
   "attachments": {
     "title": "Archivos adjuntos",
     "upload": "Adjuntar archivo",
