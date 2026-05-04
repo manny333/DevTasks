@@ -58,14 +58,43 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
 });
 
 // GET /api/sections/:sectionId/tasks
+// Query params: archived, status (repeatable), assigneeId, tagId, dueDateFrom, dueDateTo
 router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const showArchived = req.query.archived === 'true';
+    const rawStatus = req.query.status;
+    const statusList: string[] = typeof rawStatus === 'string' ? [rawStatus] : Array.isArray(rawStatus) ? (rawStatus as string[]) : [];
+    const validStatuses = statusList.filter((s) => ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'].includes(s));
+    const assigneeId = typeof req.query.assigneeId === 'string' ? req.query.assigneeId : undefined;
+    const tagId = typeof req.query.tagId === 'string' ? req.query.tagId : undefined;
+    const dueDateFrom = typeof req.query.dueDateFrom === 'string' ? req.query.dueDateFrom : undefined;
+    const dueDateTo = typeof req.query.dueDateTo === 'string' ? req.query.dueDateTo : undefined;
+
+    const where: Record<string, unknown> = {
+      sectionId: req.params.sectionId as string,
+    };
+    if (!showArchived) where.archived = false;
+    if (validStatuses && validStatuses.length > 0) where.status = { in: validStatuses };
+    if (assigneeId) where.assignees = { some: { userId: assigneeId } };
+    if (tagId) where.tags = { some: { tagId } };
+    if (dueDateFrom || dueDateTo) {
+      const dueFilter: Record<string, Date> = {};
+      if (dueDateFrom) {
+        const d = new Date(dueDateFrom);
+        if (!Number.isNaN(d.getTime())) dueFilter.gte = d;
+      }
+      if (dueDateTo) {
+        const d = new Date(dueDateTo);
+        if (!Number.isNaN(d.getTime())) {
+          d.setHours(23, 59, 59, 999);
+          dueFilter.lte = d;
+        }
+      }
+      if (Object.keys(dueFilter).length > 0) where.dueDate = dueFilter;
+    }
+
     const tasks = await prisma.task.findMany({
-      where: {
-        sectionId: req.params.sectionId as string,
-        ...(!showArchived && { archived: false }),
-      },
+      where: where as any,
       include: {
         tags: { include: { tag: true } },
         assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },

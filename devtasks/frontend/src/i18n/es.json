@@ -155,6 +155,21 @@
     "search": "Buscar",
     "close": "Cerrar"
   },
+  "filters": {
+    "status": "Estado",
+    "assignee": "Responsable",
+    "tag": "Etiqueta",
+    "clear": "Limpiar",
+    "clearFilter": "Quitar filtro",
+    "noMembers": "Sin miembros",
+    "noTags": "Sin etiquetas",
+    "due": {
+      "all": "Cualquier fecha",
+      "overdue": "Vencidas",
+      "today": "Vence hoy",
+      "week": "Vence esta semana"
+    }
+  },
   "notifications": {
     "title": "Notificaciones",
     "empty": "¡Estás al día!",

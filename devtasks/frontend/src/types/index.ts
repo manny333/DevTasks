@@ -165,3 +165,19 @@ export interface Notification {
   projectName: string | null;
   meta: Record<string, unknown> | null;
 }
+
+export type DuePreset = 'all' | 'overdue' | 'today' | 'week';
+
+export interface TaskFilters {
+  statuses: TaskStatus[];
+  assigneeId: string | null;
+  tagId: string | null;
+  duePreset: DuePreset;
+}
+
+export const DEFAULT_FILTERS: TaskFilters = {
+  statuses: [],
+  assigneeId: null,
+  tagId: null,
+  duePreset: 'all',
+};

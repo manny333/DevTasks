@@ -105,6 +105,117 @@
 .section-color-swatch.selected { border-color: var(--text-primary); transform: scale(1.15); }
 .add-section-actions { display: flex; gap: 6px; }
 
+/* ─── Filter Bar ─────────────────────────────────────── */
+.filter-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 0 2px;
+}
+.filter-group {
+  position: relative;
+}
+.filter-group-status {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.filter-chip {
+  display: inline-flex; align-items: center;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--text-primary); }
+.filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.filter-dropdown-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.filter-dropdown-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+.filter-dropdown-btn.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.filter-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  min-width: 180px; max-height: 220px; overflow-y: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 8px 20px var(--shadow);
+  z-index: 20;
+}
+.filter-dropdown-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 10px; border-radius: 7px;
+  border: none; background: none; cursor: pointer; text-align: left;
+  font-size: 12px; color: var(--text-primary);
+  transition: background 0.1s;
+}
+.filter-dropdown-item:hover { background: var(--bg-tertiary); }
+.filter-dropdown-item.active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent); font-weight: 600;
+}
+.filter-dropdown-clear {
+  color: var(--text-muted); font-size: 11px;
+  border-bottom: 1px solid var(--border); border-radius: 0;
+  margin-bottom: 2px; padding-bottom: 8px;
+}
+.filter-dropdown-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.filter-dropdown-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.filter-dropdown-empty {
+  padding: 10px 10px; font-size: 12px; color: var(--text-muted); text-align: center;
+}
+.filter-avatar {
+  width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+}
+.filter-avatar-initial {
+  background: var(--accent); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+}
+.filter-clear-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px; cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.filter-clear-btn:hover { border-color: var(--danger, #ef4444); color: var(--danger, #ef4444); }
+.filter-clear-count {
+  background: var(--accent); color: #fff;
+  font-size: 9px; font-weight: 700;
+  min-width: 16px; height: 16px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0 5px;
+}
+
+@media (max-width: 640px) {
+  .filter-bar {
+    padding: 6px 0 0;
+    gap: 6px;
+  }
+  .filter-chip,
+  .filter-dropdown-btn {
+    font-size: 10px; padding: 3px 8px;
+  }
+  .filter-dropdown-btn svg { width: 10px; height: 10px; }
+}
+
 /* ─── Board Area ─────────────────────────────────────── */
 .board-area {
   flex: 1; overflow: auto; padding: 0; display: flex; flex-direction: column; gap: 0;

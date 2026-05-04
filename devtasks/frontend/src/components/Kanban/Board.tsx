@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, DragOverlay, closestCorners } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
-import type { Section, Task, Tag, TaskStatus, MyAccess, ProjectMember } from '../../types';
+import type { Section, Task, Tag, TaskStatus, MyAccess, ProjectMember, TaskFilters } from '../../types';
+import { DEFAULT_FILTERS } from '../../types';
 import Column from './Column';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import CreateTaskModal from './CreateTaskModal';
 import UndoToast from '../UndoToast';
+import FilterBar, { getDueDateRange } from '../Filters/FilterBar';
 
 const COLUMNS: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 
@@ -41,24 +43,36 @@ export default function Board({ section, projectTags, allSections, projectMember
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [mobileStatusTab, setMobileStatusTab] = useState<TaskStatus>('TODO');
+  const [filters, setFilters] = useState<TaskFilters>(DEFAULT_FILTERS);
   const deleteTaskTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  const fetchTasks = () => {
+  const fetchTasks = useCallback(() => {
     setLoading(true);
+    const params = new URLSearchParams();
+    params.set('archived', String(showArchived));
+    if (filters.statuses.length > 0) {
+      filters.statuses.forEach((s) => params.append('status', s));
+    }
+    if (filters.assigneeId) params.set('assigneeId', filters.assigneeId);
+    if (filters.tagId) params.set('tagId', filters.tagId);
+    const dueRange = getDueDateRange(filters.duePreset);
+    if (dueRange.from) params.set('dueDateFrom', dueRange.from);
+    if (dueRange.to) params.set('dueDateTo', dueRange.to);
+
     api
-      .get(`/sections/${section.id}/tasks?archived=${showArchived}`)
+      .get(`/sections/${section.id}/tasks?${params.toString()}`)
       .then((res) => setTasks(res.data))
       .finally(() => setLoading(false));
-  };
+  }, [section.id, showArchived, filters]);
 
   useEffect(() => {
     fetchTasks();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section.id, showArchived]);
+  }, [fetchTasks]);
 
   useEffect(() => {
     if (!loading) onTasksChanged?.(section.id, tasks);
@@ -229,6 +243,13 @@ export default function Board({ section, projectTags, allSections, projectMember
             {t('tasks.showArchived')}
           </label>
         </div>
+
+        <FilterBar
+          filters={filters}
+          onChange={setFilters}
+          projectMembers={projectMembers || []}
+          projectTags={projectTags}
+        />
 
         {isMobileView && (
           <div className="board-mobile-status-tabs" role="tablist" aria-label={t('tasks.statusTitle')}>
