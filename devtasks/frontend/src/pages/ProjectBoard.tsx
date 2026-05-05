@@ -113,6 +113,19 @@ export default function ProjectBoard() {
     }));
   }, []);
 
+  const handleMoveSection = async (task: Task, sectionId: string) => {
+    try {
+      await api.patch(`/tasks/${task.id}/move-section`, { sectionId });
+      const targetSection = project?.sections?.find((s) => s.id === sectionId);
+      setSelectedTask((prev) => prev ? { ...prev, sectionId, section: targetSection as any } : null);
+      // Reload project to get updated tasks
+      if (slug) {
+        const res = await api.get(`/projects/${slug}`);
+        setProject(res.data);
+      }
+    } catch { /* ignore */ }
+  };
+
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
   if (!project) return <div className="error-state">Project not found</div>;
 
@@ -289,6 +302,7 @@ export default function ProjectBoard() {
           projectMembers={project.members || []}
           canEdit={canEdit}
           allSections={project.sections || []}
+          onMoveSection={handleMoveSection}
           onClose={() => setSelectedTask(null)}
           onUpdate={(updated) => setSelectedTask(updated)}
           onDelete={async () => setSelectedTask(null)}
