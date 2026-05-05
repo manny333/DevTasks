@@ -155,6 +155,23 @@
     "search": "Buscar",
     "close": "Cerrar"
   },
+  "calendar": {
+    "title": "Calendario",
+    "kanban": "Tablero",
+    "month": "Mes",
+    "week": "Semana",
+    "today": "Hoy",
+    "more": "más",
+    "days": {
+      "Mon": "Lun",
+      "Tue": "Mar",
+      "Wed": "Mié",
+      "Thu": "Jue",
+      "Fri": "Vie",
+      "Sat": "Sáb",
+      "Sun": "Dom"
+    }
+  },
   "activity": {
     "title": "Actividad",
     "empty": "Aún no hay actividad registrada para esta tarea.",
