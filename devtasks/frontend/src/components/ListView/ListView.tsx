@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import api from '../../services/api';
 import type { Section, Task, TaskStatus } from '../../types';
 
 interface ListViewProps {
@@ -29,18 +28,7 @@ export default function ListView({ sections, onTaskClick }: ListViewProps) {
   const [sortKey, setSortKey] = useState<SortKey>('dueDate');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [showArchived, setShowArchived] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  // Re-fetch tasks when needed (e.g., after creating a task from the kanban)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // silently refresh tasks list every 30s in case new tasks were added in another view
-      setRefreshKey((k) => k + 1);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Also re-build task list when sections prop changes
   const allTasks: (Task & { sectionName: string; sectionColor: string; sectionId: string })[] = useMemo(() => {
     const result: (Task & { sectionName: string; sectionColor: string; sectionId: string })[] = [];
     for (const sec of sections) {
@@ -56,7 +44,7 @@ export default function ListView({ sections, onTaskClick }: ListViewProps) {
     }
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sections, showArchived, refreshKey]);
+  }, [sections, showArchived]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
