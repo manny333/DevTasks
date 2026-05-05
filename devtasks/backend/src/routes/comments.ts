@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { notify } from '../lib/notify';
+import { logActivity } from '../lib/activity';
 
 const router = Router();
 router.use(authMiddleware);
@@ -76,6 +77,17 @@ router.post('/:taskId/comments', async (req: AuthRequest, res: Response): Promis
           projectName: task.section.project.name,
         });
       }
+
+      logActivity({
+        action: 'COMMENT_ADDED',
+        taskId: task.id,
+        taskTitle: task.title,
+        projectId: task.section.project.id,
+        sectionId: task.section.id,
+        sectionName: task.section.name,
+        actorId: req.userId!,
+        actorName: comment.author.name,
+      });
     }
 
     res.status(201).json(comment);

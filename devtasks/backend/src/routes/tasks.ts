@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { requireTaskAccess, getSectionAccess, canEdit } from '../lib/access';
 import { notify } from '../lib/notify';
+import { logActivity } from '../lib/activity';
 
 const router = Router();
 router.use(authMiddleware);
@@ -104,6 +105,18 @@ router.patch('/:id/move', async (req: AuthRequest, res: Response): Promise<void>
         projectName: task.section.project.name,
         meta: { newStatus: status },
       });
+
+      logActivity({
+        action: 'TASK_STATUS_CHANGED',
+        taskId: task.id,
+        taskTitle: task.title,
+        projectId: task.section.project.id,
+        sectionId: task.section.id,
+        sectionName: task.section.name,
+        actorId: req.userId!,
+        actorName: actor?.name ?? 'Someone',
+        details: { oldStatus: task.status, newStatus: status },
+      });
     }
 
     res.json(updated);
@@ -123,7 +136,10 @@ router.patch('/:id/move-section', async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const task = await prisma.task.findUnique({ where: { id: req.params.id as string } });
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      include: { section: { include: { project: { select: { id: true, name: true } } } } },
+    });
     if (!task) {
       res.status(404).json({ error: 'Task not found' });
       return;
@@ -131,6 +147,11 @@ router.patch('/:id/move-section', async (req: AuthRequest, res: Response): Promi
 
     // Place at end of same-status column in the target section
     const count = await prisma.task.count({ where: { sectionId, status: task.status } });
+
+    const targetSection = await prisma.section.findUnique({
+      where: { id: sectionId },
+      select: { id: true, name: true, project: { select: { id: true, name: true } } },
+    });
 
     const updated = await prisma.task.update({
       where: { id: req.params.id as string },
@@ -141,6 +162,20 @@ router.patch('/:id/move-section', async (req: AuthRequest, res: Response): Promi
         _count: { select: { comments: true, subtasks: true } },
       },
     });
+
+    const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+    logActivity({
+      action: 'TASK_MOVED_SECTION',
+      taskId: task.id,
+      taskTitle: task.title,
+      projectId: task.section.project.id,
+      sectionId: targetSection?.id ?? sectionId,
+      sectionName: targetSection?.name ?? '',
+      actorId: req.userId!,
+      actorName: actor?.name ?? 'Someone',
+      details: { fromSectionId: task.section.id, fromSectionName: task.section.name, toSectionId: sectionId, toSectionName: targetSection?.name },
+    });
+
     res.json(updated);
   } catch (error) {
     console.error('Move section error:', error);
@@ -152,7 +187,10 @@ router.patch('/:id/move-section', async (req: AuthRequest, res: Response): Promi
 router.patch('/:id/archive', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!await requireTaskAccess(req, res)) return;
-    const task = await prisma.task.findUnique({ where: { id: req.params.id as string } });
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      include: { section: { include: { project: { select: { id: true, name: true } } } } },
+    });
     if (!task) {
       res.status(404).json({ error: 'Task not found' });
       return;
@@ -161,6 +199,19 @@ router.patch('/:id/archive', async (req: AuthRequest, res: Response): Promise<vo
       where: { id: req.params.id as string },
       data: { archived: !task.archived },
     });
+
+    const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+    logActivity({
+      action: !task.archived ? 'TASK_ARCHIVED' : 'TASK_UNARCHIVED',
+      taskId: task.id,
+      taskTitle: task.title,
+      projectId: task.section.project.id,
+      sectionId: task.section.id,
+      sectionName: task.section.name,
+      actorId: req.userId!,
+      actorName: actor?.name ?? 'Someone',
+    });
+
     res.json(updated);
   } catch (error) {
     console.error('Archive task error:', error);
@@ -290,6 +341,27 @@ router.post('/:id/tags', async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
     await prisma.taskTag.create({ data: { taskId: req.params.id as string, tagId } });
+
+    const taskMeta = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      select: { title: true, section: { select: { id: true, name: true, project: { select: { id: true } } } } },
+    });
+    const tag = await prisma.tag.findUnique({ where: { id: tagId }, select: { name: true } });
+    const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+    if (taskMeta) {
+      logActivity({
+        action: 'TAG_ADDED',
+        taskId: req.params.id as string,
+        taskTitle: taskMeta.title,
+        projectId: taskMeta.section.project.id,
+        sectionId: taskMeta.section.id,
+        sectionName: taskMeta.section.name,
+        actorId: req.userId!,
+        actorName: actor?.name ?? 'Someone',
+        details: { tagName: tag?.name },
+      });
+    }
+
     res.status(201).json({ success: true });
   } catch (error) {
     console.error('Add tag error:', error);
@@ -304,6 +376,27 @@ router.delete('/:id/tags/:tagId', async (req: AuthRequest, res: Response): Promi
     await prisma.taskTag.delete({
       where: { taskId_tagId: { taskId: req.params.id as string, tagId: req.params.tagId as string } },
     });
+
+    const taskMeta = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      select: { title: true, section: { select: { id: true, name: true, project: { select: { id: true } } } } },
+    });
+    const tag = await prisma.tag.findUnique({ where: { id: req.params.tagId as string }, select: { name: true } });
+    const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+    if (taskMeta) {
+      logActivity({
+        action: 'TAG_REMOVED',
+        taskId: req.params.id as string,
+        taskTitle: taskMeta.title,
+        projectId: taskMeta.section.project.id,
+        sectionId: taskMeta.section.id,
+        sectionName: taskMeta.section.name,
+        actorId: req.userId!,
+        actorName: actor?.name ?? 'Someone',
+        details: { tagName: tag?.name },
+      });
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error('Remove tag error:', error);
@@ -351,6 +444,20 @@ router.post('/:id/assignees', async (req: AuthRequest, res: Response): Promise<v
         projectId: task?.section.project.id,
         projectName: task?.section.project.name,
       });
+
+      if (task) {
+        logActivity({
+          action: 'ASSIGNEE_ADDED',
+          taskId: task.id,
+          taskTitle: task.title,
+          projectId: task.section.project.id,
+          sectionId: task.section.id,
+          sectionName: task.section.name,
+          actorId: req.userId!,
+          actorName: actor?.name ?? 'Someone',
+          details: { assigneeName: user.name, assigneeEmail: user.email },
+        });
+      }
     }
 
     res.status(201).json(assignee);
@@ -419,11 +526,44 @@ router.delete('/:id/assignees/:userId', async (req: AuthRequest, res: Response):
         projectId: task?.section.project.id,
         projectName: task?.section.project.name,
       });
+
+      if (task) {
+        const removedUser = await prisma.user.findUnique({ where: { id: removedUserId }, select: { name: true, email: true } });
+        logActivity({
+          action: 'ASSIGNEE_REMOVED',
+          taskId: task.id,
+          taskTitle: task.title,
+          projectId: task.section.project.id,
+          sectionId: task.section.id,
+          sectionName: task.section.name,
+          actorId: req.userId!,
+          actorName: actor?.name ?? 'Someone',
+          details: { assigneeName: removedUser?.name, assigneeEmail: removedUser?.email },
+        });
+      }
     }
 
     res.json({ success: true });
   } catch (error) {
     console.error('Remove assignee error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ─── Activity ───────────────────────────────────────────
+
+// GET /api/tasks/:id/activity — list activity log for a task
+router.get('/:id/activity', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res, false)) return;
+    const activity = await prisma.activityLog.findMany({
+      where: { taskId: req.params.id as string },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    res.json(activity);
+  } catch (error) {
+    console.error('List activity error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

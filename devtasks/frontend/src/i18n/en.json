@@ -174,6 +174,38 @@
       "viewer": "Viewer"
     }
   },
+  "activity": {
+    "title": "Activity",
+    "empty": "No activity recorded for this task yet.",
+    "justNow": "just now",
+    "minutesAgo": "{{n}} min ago",
+    "minutesAgo_plural": "{{n}} mins ago",
+    "hoursAgo": "{{n}} hour ago",
+    "hoursAgo_plural": "{{n}} hours ago",
+    "daysAgo": "{{n}} day ago",
+    "daysAgo_plural": "{{n}} days ago",
+    "action": {
+      "TASK_CREATED": "created this task",
+      "TASK_UPDATED": "updated the task",
+      "TASK_STATUS_CHANGED": "moved from {{from}} to {{to}}",
+      "TASK_MOVED_SECTION": "moved to {{section}}",
+      "TASK_ARCHIVED": "archived this task",
+      "TASK_UNARCHIVED": "unarchived this task",
+      "TASK_DELETED": "deleted this task",
+      "COMMENT_ADDED": "added a comment",
+      "COMMENT_DELETED": "deleted a comment",
+      "SUBTASK_ADDED": "added a subtask",
+      "SUBTASK_COMPLETED": "completed a subtask",
+      "SUBTASK_UNCOMPLETED": "reopened a subtask",
+      "SUBTASK_DELETED": "deleted a subtask",
+      "ASSIGNEE_ADDED": "assigned {{user}}",
+      "ASSIGNEE_REMOVED": "unassigned {{user}}",
+      "TAG_ADDED": "added tag {{tag}}",
+      "TAG_REMOVED": "removed tag {{tag}}",
+      "ATTACHMENT_UPLOADED": "uploaded an attachment",
+      "ATTACHMENT_DELETED": "deleted an attachment"
+    }
+  },
   "filters": {
     "status": "Status",
     "assignee": "Assignee",

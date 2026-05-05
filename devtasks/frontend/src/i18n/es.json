@@ -155,6 +155,38 @@
     "search": "Buscar",
     "close": "Cerrar"
   },
+  "activity": {
+    "title": "Actividad",
+    "empty": "Aún no hay actividad registrada para esta tarea.",
+    "justNow": "ahora mismo",
+    "minutesAgo": "hace {{n}} min",
+    "minutesAgo_plural": "hace {{n}} mins",
+    "hoursAgo": "hace {{n}} hora",
+    "hoursAgo_plural": "hace {{n}} horas",
+    "daysAgo": "hace {{n}} día",
+    "daysAgo_plural": "hace {{n}} días",
+    "action": {
+      "TASK_CREATED": "creó esta tarea",
+      "TASK_UPDATED": "actualizó la tarea",
+      "TASK_STATUS_CHANGED": "movió de {{from}} a {{to}}",
+      "TASK_MOVED_SECTION": "movió a {{section}}",
+      "TASK_ARCHIVED": "archivó esta tarea",
+      "TASK_UNARCHIVED": "desarchivó esta tarea",
+      "TASK_DELETED": "eliminó esta tarea",
+      "COMMENT_ADDED": "agregó un comentario",
+      "COMMENT_DELETED": "eliminó un comentario",
+      "SUBTASK_ADDED": "agregó una subtarea",
+      "SUBTASK_COMPLETED": "completó una subtarea",
+      "SUBTASK_UNCOMPLETED": "reaperturó una subtarea",
+      "SUBTASK_DELETED": "eliminó una subtarea",
+      "ASSIGNEE_ADDED": "asignó a {{user}}",
+      "ASSIGNEE_REMOVED": "desasignó a {{user}}",
+      "TAG_ADDED": "agregó etiqueta {{tag}}",
+      "TAG_REMOVED": "quitó etiqueta {{tag}}",
+      "ATTACHMENT_UPLOADED": "subió un archivo",
+      "ATTACHMENT_DELETED": "eliminó un archivo"
+    }
+  },
   "filters": {
     "status": "Estado",
     "assignee": "Responsable",

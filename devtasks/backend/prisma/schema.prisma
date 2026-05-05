@@ -40,6 +40,28 @@ enum NotificationType {
   MENTION
 }
 
+enum ActivityAction {
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_STATUS_CHANGED
+  TASK_MOVED_SECTION
+  TASK_ARCHIVED
+  TASK_UNARCHIVED
+  TASK_DELETED
+  COMMENT_ADDED
+  COMMENT_DELETED
+  SUBTASK_ADDED
+  SUBTASK_COMPLETED
+  SUBTASK_UNCOMPLETED
+  SUBTASK_DELETED
+  ASSIGNEE_ADDED
+  ASSIGNEE_REMOVED
+  TAG_ADDED
+  TAG_REMOVED
+  ATTACHMENT_UPLOADED
+  ATTACHMENT_DELETED
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -56,6 +78,7 @@ model User {
   taskAssignments  TaskAssignee[]
   comments         Comment[]
   notifications    Notification[]   @relation("UserNotifications")
+  activities       ActivityLog[]    @relation("UserActivities")
 }
 
 model Project {
@@ -139,6 +162,7 @@ model Task {
   assignees   TaskAssignee[]
   attachments TaskAttachment[]
   subtasks    Subtask[]
+  activities  ActivityLog[]     @relation("TaskActivities")
 }
 
 model Subtask {
@@ -243,4 +267,25 @@ model Notification {
   projectId   String?
   projectName String?
   meta        Json?    // e.g. { newStatus: "DONE" } for status changes
+}
+
+model ActivityLog {
+  id          String         @id @default(cuid())
+  action      ActivityAction
+  createdAt   DateTime       @default(now())
+
+  taskId      String
+  taskTitle   String
+  projectId   String
+  sectionId   String?
+  sectionName String?
+  actorId     String
+  actorName   String
+  details     Json?
+
+  task  Task @relation("TaskActivities", fields: [taskId], references: [id], onDelete: Cascade)
+  actor User @relation("UserActivities", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([projectId])
 }

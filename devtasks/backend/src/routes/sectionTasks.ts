@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { getSectionAccess, canEdit } from '../lib/access';
+import { logActivity } from '../lib/activity';
 
 const router = Router();
 router.use(authMiddleware);
@@ -50,6 +51,25 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
         _count: { select: { comments: true, subtasks: true } },
       },
     });
+
+    const section = await prisma.section.findUnique({
+      where: { id: req.params.sectionId as string },
+      include: { project: { select: { id: true } } },
+    });
+    const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+    if (section) {
+      logActivity({
+        action: 'TASK_CREATED',
+        taskId: task.id,
+        taskTitle: task.title,
+        projectId: section.project.id,
+        sectionId: section.id,
+        sectionName: section.name,
+        actorId: req.userId!,
+        actorName: actor?.name ?? 'Someone',
+      });
+    }
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Create task error:', error);

@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember, Subtask } from '../../types';
 import AttachmentDropZone from './AttachmentDropZone';
 import MentionTextarea from './MentionTextarea';
+import ActivityTimeline from '../Activity/ActivityTimeline';
 
 interface TaskModalProps {
   task: Task;
@@ -858,6 +859,12 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               >{t('subtasks.add')}</button>
             </form>
           )}
+        </div>
+
+        {/* Activity */}
+        <div className="task-modal-activity">
+          <h3>{t('activity.title')}</h3>
+          <ActivityTimeline taskId={task.id} />
         </div>
 
         {/* Comments */}

@@ -520,6 +520,7 @@
 .task-drawer .task-modal-assignees    { padding-top: 16px; }
 .task-drawer .task-modal-attachments  { padding-top: 16px; }
 .task-drawer .task-modal-subtasks     { padding-top: 16px; }
+.task-drawer .task-modal-activity     { padding-top: 16px; }
 .task-drawer .task-modal-comments     { padding-top: 20px; padding-bottom: 32px; }
 
 .task-modal-header { display: flex; align-items: flex-start; gap: 8px; }
@@ -1177,6 +1178,45 @@ a.attachment-name:hover { color: var(--accent); }
 .task-card-subtasks-progress-fill {
   height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a);
   border-radius: 2px; transition: width 0.35s ease;
+}
+
+/* ─── Activity Timeline ───────────────────────────────── */
+.task-modal-activity {
+  border-top: 1px solid var(--border); padding-top: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.task-modal-activity h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.activity-timeline-loading { padding: 8px 0; color: var(--text-muted); font-size: 12px; }
+.activity-timeline-empty { padding: 8px 0; color: var(--text-muted); font-size: 13px; }
+.activity-timeline {
+  display: flex; flex-direction: column; gap: 0;
+  position: relative;
+  padding-left: 16px;
+}
+.activity-timeline::before {
+  content: '';
+  position: absolute; top: 4px; bottom: 4px; left: 4px;
+  width: 2px; background: var(--border); border-radius: 1px;
+}
+.activity-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 6px 0; position: relative;
+}
+.activity-dot {
+  position: absolute; left: -13px; top: 10px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  border: 2px solid var(--bg-secondary);
+}
+.activity-body {
+  display: flex; flex-direction: column; gap: 1px;
+}
+.activity-description {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.45;
+}
+.activity-description strong { font-weight: 600; color: var(--text-primary); }
+.activity-time {
+  font-size: 10.5px; color: var(--text-muted);
 }
 
 /* ─── Board Responsive ─────────────────────────────────────────── */

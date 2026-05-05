@@ -181,3 +181,38 @@ export const DEFAULT_FILTERS: TaskFilters = {
   tagId: null,
   duePreset: 'all',
 };
+
+export type ActivityAction =
+  | 'TASK_CREATED'
+  | 'TASK_UPDATED'
+  | 'TASK_STATUS_CHANGED'
+  | 'TASK_MOVED_SECTION'
+  | 'TASK_ARCHIVED'
+  | 'TASK_UNARCHIVED'
+  | 'TASK_DELETED'
+  | 'COMMENT_ADDED'
+  | 'COMMENT_DELETED'
+  | 'SUBTASK_ADDED'
+  | 'SUBTASK_COMPLETED'
+  | 'SUBTASK_UNCOMPLETED'
+  | 'SUBTASK_DELETED'
+  | 'ASSIGNEE_ADDED'
+  | 'ASSIGNEE_REMOVED'
+  | 'TAG_ADDED'
+  | 'TAG_REMOVED'
+  | 'ATTACHMENT_UPLOADED'
+  | 'ATTACHMENT_DELETED';
+
+export interface ActivityLog {
+  id: string;
+  action: ActivityAction;
+  createdAt: string;
+  taskId: string;
+  taskTitle: string;
+  projectId: string;
+  sectionId: string | null;
+  sectionName: string | null;
+  actorId: string;
+  actorName: string;
+  details: Record<string, unknown> | null;
+}
