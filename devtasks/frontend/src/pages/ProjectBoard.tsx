@@ -5,6 +5,7 @@ import api from '../services/api';
 import type { Project, Section, Tag, Task } from '../types';
 import Board from '../components/Kanban/Board';
 import CalendarBoard from '../components/Calendar/CalendarBoard';
+import ListView from '../components/ListView/ListView';
 import TaskModal from '../components/Kanban/TaskModal';
 import ManageTagsModal from '../components/Tags/ManageTagsModal';
 import ManageMembersModal from '../components/Members/ManageMembersModal';
@@ -29,8 +30,8 @@ export default function ProjectBoard() {
   const [pendingDeleteSection, setPendingDeleteSection] = useState<Section | null>(null);
   const deleteSectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showArchivedSections, setShowArchivedSections] = useState(false);
-  const [viewMode, setViewMode] = useState<'kanban' | 'calendar'>('kanban');
-  const [calendarTask, setCalendarTask] = useState<Task | null>(null);
+  const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list'>('kanban');
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   useEffect(() => {
     if (!slug) return;
     api
@@ -241,6 +242,15 @@ export default function ProjectBoard() {
             </svg>
             {t('calendar.title')}
           </button>
+          <button
+            className={`calendar-view-btn ${viewMode === 'list' ? 'active' : ''}`}
+            onClick={() => setViewMode('list')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            {t('calendar.list')}
+          </button>
         </div>
 
         {viewMode === 'kanban' ? (
@@ -256,27 +266,32 @@ export default function ProjectBoard() {
           ) : (
             <div className="empty-state">{t('sections.noSections')}</div>
           )
-        ) : (
+        ) : viewMode === 'calendar' ? (
           <CalendarBoard
             projectId={project.id}
             allSections={project.sections || []}
             projectMembers={project.members || []}
             myAccess={project.myAccess}
-            onTaskClick={(task) => setCalendarTask(task)}
+            onTaskClick={(task) => setSelectedTask(task)}
+          />
+        ) : (
+          <ListView
+            sections={project.sections || []}
+            onTaskClick={(task) => setSelectedTask(task)}
           />
         )}
       </main>
 
-      {calendarTask && (
+      {selectedTask && (
         <TaskModal
-          task={calendarTask}
+          task={selectedTask}
           projectTags={project.tags || []}
           projectMembers={project.members || []}
           canEdit={canEdit}
           allSections={project.sections || []}
-          onClose={() => setCalendarTask(null)}
-          onUpdate={(updated) => setCalendarTask(updated)}
-          onDelete={async () => setCalendarTask(null)}
+          onClose={() => setSelectedTask(null)}
+          onUpdate={(updated) => setSelectedTask(updated)}
+          onDelete={async () => setSelectedTask(null)}
         />
       )}
 

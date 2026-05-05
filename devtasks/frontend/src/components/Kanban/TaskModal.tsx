@@ -411,12 +411,12 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
           </div>
           <button className="btn-icon modal-close" onClick={onClose}>×</button>
           <div className="task-modal-tags">
-            {task.tags.map(({ tag }) => (
+            {task.tags.filter(tt => tt?.tag).map(({ tag }) => (
               <span
-                key={tag.id}
+                key={tag!.id}
                 className="tag-badge"
-                style={{ backgroundColor: tag.color }}
-                onClick={() => canEdit && removeTag(tag.id)}
+                style={{ backgroundColor: tag!.color }}
+                onClick={() => canEdit && removeTag(tag!.id)}
                 title={canEdit ? 'Click to remove' : undefined}
               >
                 {tag.name}{canEdit && ' ×'}

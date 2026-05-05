@@ -109,13 +109,13 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
         <p className="task-card-title">{task.title}</p>
         {task.tags.length > 0 && (
           <div className="task-card-tags">
-            {task.tags.map(({ tag }) => (
+            {task.tags.filter(tt => tt?.tag).map(({ tag }) => (
               <span
-                key={tag.id}
+                key={tag!.id}
                 className="tag-badge"
-                style={{ backgroundColor: tag.color }}
+                style={{ backgroundColor: tag!.color }}
               >
-                {tag.name}
+                {tag!.name}
               </span>
             ))}
           </div>

@@ -158,6 +158,7 @@
   "calendar": {
     "title": "Calendario",
     "kanban": "Tablero",
+    "list": "Lista",
     "month": "Mes",
     "week": "Semana",
     "today": "Hoy",

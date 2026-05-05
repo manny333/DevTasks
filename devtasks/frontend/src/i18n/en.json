@@ -177,6 +177,7 @@
   "calendar": {
     "title": "Calendar",
     "kanban": "Board",
+    "list": "List",
     "month": "Month",
     "week": "Week",
     "today": "Today",

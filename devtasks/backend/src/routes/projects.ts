@@ -180,9 +180,10 @@ router.get('/:slug', async (req: AuthRequest, res: Response): Promise<void> => {
             tasks: {
               orderBy: { position: 'asc' },
               include: {
-                tags: true,
+                tags: { include: { tag: true } },
                 assignees: { include: { user: { select: { id: true, name: true, avatar: true, email: true } } } },
-                _count: { select: { comments: true } },
+                subtasks: { orderBy: { position: 'asc' } },
+                _count: { select: { comments: true, subtasks: true } },
               },
             },
             members: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
