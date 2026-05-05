@@ -58,6 +58,9 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [attachmentView, setAttachmentView] = useState<'grid' | 'list'>('grid');
   const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null);
 
+  const [attachmentsExpanded, setAttachmentsExpanded] = useState(true);
+  const [activityExpanded, setActivityExpanded] = useState(false);
+
   const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks ?? []);
   const [subtaskInput, setSubtaskInput] = useState('');
   const [subtaskAdding, setSubtaskAdding] = useState(false);
@@ -377,172 +380,211 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
       <div className="task-drawer">
         {/* Header */}
         <div className="task-modal-header">
-          {editing ? (
-            <input
-              className="task-modal-title-input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-            />
-          ) : (
-            <h2 className="task-modal-title" onClick={() => canEdit && setEditing(true)}>
-              {task.title}
-            </h2>
-          )}
-          <button className="btn-icon modal-close" onClick={onClose}>×</button>
-        </div>
-
-        <div className={`task-save-state task-save-state-${saveState}`}>
-          {saveState === 'saving' && t('tasks.autosave.saving')}
-          {saveState === 'saved' && t('tasks.autosave.saved')}
-          {saveState === 'error' && t('tasks.autosave.error')}
-        </div>
-
-        {/* Tags row */}
-        <div className="task-modal-tags">
-          {task.tags.map(({ tag }) => (
-            <span
-              key={tag.id}
-              className="tag-badge"
-              style={{ backgroundColor: tag.color }}
-              onClick={() => canEdit && removeTag(tag.id)}
-              title={canEdit ? 'Click to remove' : undefined}
-            >
-              {tag.name}{canEdit && ' ×'}
+          <div className="task-modal-title-wrap">
+            {editing ? (
+              <input
+                className="task-modal-title-input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); save(); }
+                }}
+                autoFocus
+              />
+            ) : (
+              <>
+                <h2 className="task-modal-title" onClick={() => canEdit && setEditing(true)}>
+                  {task.title}
+                </h2>
+                {canEdit && (
+                  <svg className="task-modal-title-edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                  </svg>
+                )}
+              </>
+            )}
+            <span className={`task-save-dot task-save-dot-${saveState}`}>
+              {saveState === 'saving' && <><span className="task-save-spinner" />{t('tasks.autosave.saving')}</>}
+              {saveState === 'saved' && <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>{t('tasks.autosave.saved')}</>}
+              {saveState === 'error' && <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>{t('tasks.autosave.error')}</>}
             </span>
-          ))}
-          {canEdit && availableTags.length > 0 && (
+          </div>
+          <button className="btn-icon modal-close" onClick={onClose}>×</button>
+          <div className="task-modal-tags">
+            {task.tags.map(({ tag }) => (
+              <span
+                key={tag.id}
+                className="tag-badge"
+                style={{ backgroundColor: tag.color }}
+                onClick={() => canEdit && removeTag(tag.id)}
+                title={canEdit ? 'Click to remove' : undefined}
+              >
+                {tag.name}{canEdit && ' ×'}
+              </span>
+            ))}
+            {canEdit && availableTags.length > 0 && (
+              <>
+                <button
+                  ref={tagBtnRef}
+                  className="tag-add-btn"
+                  onClick={() => setTagPickerOpen((o) => !o)}
+                >+ tag</button>
+                {tagPickerOpen && createPortal(
+                  <div
+                    ref={tagPickerRef}
+                    className="tag-picker-dropdown"
+                    style={(() => {
+                      const rect = tagBtnRef.current?.getBoundingClientRect();
+                      return rect
+                        ? { position: 'fixed' as const, top: rect.bottom + 4, left: rect.left }
+                        : { position: 'fixed' as const, top: 0, left: 0 };
+                    })()}
+                  >
+                    {availableTags.map((t) => (
+                      <button
+                        key={t.id}
+                        className="tag-picker-item"
+                        onClick={() => { addTag(t.id); setTagPickerOpen(false); }}
+                      >
+                        <span className="tag-picker-dot" style={{ background: t.color }} />
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Metadata row */}
+        <div className="task-modal-meta">
+          <span className="task-modal-status-badge" data-status={task.status}>
+            <span className="task-modal-status-dot" />
+            {t(`tasks.status.${task.status}`)}
+          </span>
+          {currentSection && (
             <>
-              <button
-                ref={tagBtnRef}
-                className="tag-add-btn"
-                onClick={() => setTagPickerOpen((o) => !o)}
-              >+ tag</button>
-              {tagPickerOpen && createPortal(
-                <div
-                  ref={tagPickerRef}
-                  className="tag-picker-dropdown"
-                  style={(() => {
-                    const rect = tagBtnRef.current?.getBoundingClientRect();
-                    return rect
-                      ? { position: 'fixed' as const, top: rect.bottom + 4, left: rect.left }
-                      : { position: 'fixed' as const, top: 0, left: 0 };
-                  })()}
-                >
-                  {availableTags.map((t) => (
-                    <button
-                      key={t.id}
-                      className="tag-picker-item"
-                      onClick={() => { addTag(t.id); setTagPickerOpen(false); }}
-                    >
-                      <span className="tag-picker-dot" style={{ background: t.color }} />
-                      {t.name}
-                    </button>
-                  ))}
-                </div>,
-                document.body
-              )}
+              <span className="task-modal-meta-sep" />
+              <span className="task-modal-meta-item">
+                <span className="task-modal-meta-dot" style={{ background: currentSection.color }} />
+                {currentSection.name}
+              </span>
             </>
           )}
+          <span className="task-modal-meta-sep" />
+          <span className="task-modal-meta-item">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {editing ? (
+              <input
+                className="task-modal-meta-due-input"
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+              />
+            ) : (
+              <span className="task-modal-meta-text">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : t('tasks.dueDate')}</span>
+            )}
+          </span>
+          <span className="task-modal-meta-sep" />
+          <span className="task-modal-meta-item task-modal-meta-dim">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {new Date(task.createdAt).toLocaleDateString()}
+          </span>
         </div>
 
-        {/* Description */}
-        <div className="task-modal-section">
-          <div className="task-modal-due-row">
-            <label htmlFor="task-due-date" className="task-modal-due-label">{t('tasks.dueDate')}</label>
-            <input
-              id="task-due-date"
-              className="task-modal-due-input"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              disabled={!canEdit}
-            />
+        {/* Actions row */}
+        {editing ? (
+          <div className="task-modal-actions-row">
+            <button className="btn-primary" onClick={save} disabled={saving}>
+              {t('common.save')}
+            </button>
+            <button className="btn-secondary" onClick={() => setEditing(false)}>
+              {t('common.cancel')}
+            </button>
           </div>
-          {editing ? (
+        ) : canEdit && (
+          <div className="task-modal-actions-row">
+            <button className="btn-secondary" onClick={() => setEditing(true)}>
+              {t('common.edit')}
+            </button>
+            <button className="btn-secondary" onClick={archive}>
+              {task.archived ? t('tasks.unarchive') : t('tasks.archive')}
+            </button>
+            {allSections && allSections.length > 1 && onMoveSection && (
+              <>
+                <button
+                  ref={sectionBtnRef}
+                  className="btn-secondary task-modal-section-btn"
+                  onClick={handleSectionBtnClick}
+                >
+                  {currentSection && (
+                    <span className="task-modal-section-dot" style={{ background: currentSection.color }} />
+                  )}
+                  {t('tasks.moveTo')}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 4 }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                {sectionMenuOpen && createPortal(
+                  <div
+                    ref={sectionMenuRef}
+                    className="task-card-dropdown"
+                    style={{ position: 'fixed', top: sectionMenuPos.top, left: sectionMenuPos.left }}
+                  >
+                    <div className="task-card-dropdown-label">{t('tasks.moveTo')}</div>
+                    {allSections.map((sec) => (
+                      <button
+                        key={sec.id}
+                        className={`task-card-dropdown-item ${sec.id === task.sectionId ? 'active' : ''}`}
+                        onClick={() => { setSectionMenuOpen(false); if (sec.id !== task.sectionId) onMoveSection(task, sec.id); }}
+                      >
+                        <span className="task-card-dropdown-dot" style={{ background: sec.color }} />
+                        {sec.name}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body
+                )}
+              </>
+            )}
+            <button className="btn-danger" onClick={() => onDelete(task.id)}>
+              {t('common.delete')}
+            </button>
+          </div>
+        )}
+
+        {/* Description */}
+        {editing ? (
+          <div className="task-modal-section">
             <textarea
               className="task-modal-desc-input"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); save(); }
+              }}
               placeholder={t('tasks.description')}
               rows={6}
             />
-          ) : (
-            <div
-              className="task-modal-desc markdown-body"
-              onClick={() => canEdit && setEditing(true)}
-            >
-              {description ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
-              ) : (
-                <span className="desc-placeholder">{t('tasks.description')}</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="task-modal-actions">
-          {editing ? (
-            <>
-              <button className="btn-primary" onClick={save} disabled={saving}>
-                {t('common.save')}
-              </button>
-              <button className="btn-secondary" onClick={() => setEditing(false)}>
-                {t('common.cancel')}
-              </button>
-            </>
-          ) : canEdit ? (
-            <>
-              <button className="btn-secondary" onClick={() => setEditing(true)}>
-                {t('common.edit')}
-              </button>
-              <button className="btn-secondary" onClick={archive}>
-                {task.archived ? t('tasks.unarchive') : t('tasks.archive')}
-              </button>
-              {allSections && allSections.length > 1 && onMoveSection && (
-                <>
-                  <button
-                    ref={sectionBtnRef}
-                    className="btn-secondary task-modal-section-btn"
-                    onClick={handleSectionBtnClick}
-                  >
-                    {currentSection && (
-                      <span className="task-modal-section-dot" style={{ background: currentSection.color }} />
-                    )}
-                    {currentSection?.name ?? t('tasks.moveTo')}
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginLeft: 4 }}>
-                      <polyline points="6 9 12 15 18 9"/>
-                    </svg>
-                  </button>
-                  {sectionMenuOpen && createPortal(
-                    <div
-                      ref={sectionMenuRef}
-                      className="task-card-dropdown"
-                      style={{ position: 'fixed', top: sectionMenuPos.top, left: sectionMenuPos.left }}
-                    >
-                      <div className="task-card-dropdown-label">{t('tasks.moveTo')}</div>
-                      {allSections.map((sec) => (
-                        <button
-                          key={sec.id}
-                          className={`task-card-dropdown-item ${sec.id === task.sectionId ? 'active' : ''}`}
-                          onClick={() => { setSectionMenuOpen(false); if (sec.id !== task.sectionId) onMoveSection(task, sec.id); }}
-                        >
-                          <span className="task-card-dropdown-dot" style={{ background: sec.color }} />
-                          {sec.name}
-                        </button>
-                      ))}
-                    </div>,
-                    document.body
-                  )}
-                </>
-              )}
-              <button className="btn-danger" onClick={() => onDelete(task.id)}>
-                {t('common.delete')}
-              </button>
-            </>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <div
+            className="task-modal-desc markdown-body"
+            onClick={() => canEdit && setEditing(true)}
+          >
+            {description ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{description}</ReactMarkdown>
+            ) : (
+              <span className="desc-placeholder">{t('tasks.description')}</span>
+            )}
+          </div>
+        )}
 
         {/* Assignees */}
         <div className="task-modal-assignees">
@@ -616,8 +658,8 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
         </div>
 
         {/* Attachments */}
-        <div className="task-modal-attachments">
-          <div className="task-modal-attachments-header">
+        <div className="task-modal-section-collapse">
+          <div className="task-modal-section-collapse-header" onClick={() => setAttachmentsExpanded(!attachmentsExpanded)}>
             <h3 className="task-modal-attachments-title">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
@@ -625,36 +667,41 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               {t('attachments.title')}
               {attachments.length > 0 && <span className="attachment-count">{attachments.length}</span>}
             </h3>
-            {attachments.length > 0 && (
-              <div className="attachment-view-toggle">
-                <button
-                  className={`attachment-view-btn${attachmentView === 'grid' ? ' active' : ''}`}
-                  onClick={() => setAttachmentView('grid')}
-                  title={t('attachments.viewGrid')}
-                >
-                  {/* grid icon: 4 squares */}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="3" y="3" width="8" height="8" rx="1"/>
-                    <rect x="13" y="3" width="8" height="8" rx="1"/>
-                    <rect x="3" y="13" width="8" height="8" rx="1"/>
-                    <rect x="13" y="13" width="8" height="8" rx="1"/>
-                  </svg>
-                </button>
-                <button
-                  className={`attachment-view-btn${attachmentView === 'list' ? ' active' : ''}`}
-                  onClick={() => setAttachmentView('list')}
-                  title={t('attachments.viewList')}
-                >
-                  {/* list icon: 3 rows */}
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="3" y1="6" x2="21" y2="6"/>
-                    <line x1="3" y1="12" x2="21" y2="12"/>
-                    <line x1="3" y1="18" x2="21" y2="18"/>
-                  </svg>
-                </button>
-              </div>
-            )}
+            <svg className={`task-modal-section-collapse-arrow${attachmentsExpanded ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
           </div>
+          {attachmentsExpanded && (
+            <div className="task-modal-section-collapse-body">
+              <div className="task-modal-attachments-header" style={{ paddingTop: 0 }}>
+                {attachments.length > 0 && (
+                  <div className="attachment-view-toggle">
+                    <button
+                      className={`attachment-view-btn${attachmentView === 'grid' ? ' active' : ''}`}
+                      onClick={() => setAttachmentView('grid')}
+                      title={t('attachments.viewGrid')}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="3" y="3" width="8" height="8" rx="1"/>
+                        <rect x="13" y="3" width="8" height="8" rx="1"/>
+                        <rect x="3" y="13" width="8" height="8" rx="1"/>
+                        <rect x="13" y="13" width="8" height="8" rx="1"/>
+                      </svg>
+                    </button>
+                    <button
+                      className={`attachment-view-btn${attachmentView === 'list' ? ' active' : ''}`}
+                      onClick={() => setAttachmentView('list')}
+                      title={t('attachments.viewList')}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
 
           {attachments.length > 0 && (
             attachmentView === 'grid' ? (
@@ -756,11 +803,13 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
             )
           )}
 
-          {canEdit && (
-            <AttachmentDropZone
-              onFiles={handleFiles}
-              uploading={attachmentUploading}
-            />
+              {canEdit && (
+                <AttachmentDropZone
+                  onFiles={handleFiles}
+                  uploading={attachmentUploading}
+                />
+              )}
+            </div>
           )}
         </div>
 
@@ -862,14 +911,24 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
         </div>
 
         {/* Activity */}
-        <div className="task-modal-activity">
-          <h3>{t('activity.title')}</h3>
-          <ActivityTimeline taskId={task.id} />
+        <div className="task-modal-section-collapse">
+          <div className="task-modal-section-collapse-header" onClick={() => setActivityExpanded(!activityExpanded)}>
+            <h3>{t('activity.title')}</h3>
+            <svg className={`task-modal-section-collapse-arrow${activityExpanded ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+          {activityExpanded && (
+            <ActivityTimeline taskId={task.id} />
+          )}
         </div>
 
         {/* Comments */}
         <div className="task-modal-comments">
-          <h3>{t('comments.title')}</h3>
+          <h3>
+            {t('comments.title')}
+            {comments.length > 0 && <span className="attachment-count">{comments.length}</span>}
+          </h3>
           <div className="comments-list">
             {comments.map((comment) => (
               <div key={comment.id} className="comment-item">
