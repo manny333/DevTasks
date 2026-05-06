@@ -175,6 +175,9 @@
       "viewer": "Viewer"
     }
   },
+  "export": {
+    "title": "Export"
+  },
   "calendar": {
     "title": "Calendar",
     "kanban": "Board",
