@@ -41,6 +41,8 @@ export default function GanttBoard({ sections, onTaskClick }: GanttBoardProps) {
   const { t } = useTranslation();
   const [zoom, setZoom] = useState<ZoomLevel>('week');
   const [scheduleMode, setScheduleMode] = useState<'normal' | 'phases' | 'sequential'>('normal');
+  const [panning, setPanning] = useState(false);
+  const panStartRef = useRef<{ x: number; scrollX: number } | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -160,6 +162,28 @@ export default function GanttBoard({ sections, onTaskClick }: GanttBoardProps) {
     }
   };
 
+  const handleTimelineMouseDown = (e: React.MouseEvent) => {
+    if (!timelineRef.current) return;
+    setPanning(true);
+    panStartRef.current = { x: e.clientX, scrollX: timelineRef.current.scrollLeft };
+  };
+
+  useEffect(() => {
+    if (!panning) return;
+    const handleMove = (e: MouseEvent) => {
+      if (!timelineRef.current || !panStartRef.current) return;
+      const dx = panStartRef.current.x - e.clientX;
+      timelineRef.current.scrollLeft = panStartRef.current.scrollX + dx;
+    };
+    const handleUp = () => setPanning(false);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [panning]);
+
   const grouped = useMemo(() => {
     const map = new Map<string, { section: Section; tasks: GanttTask[] }>();
     for (const sec of sections) {
@@ -276,7 +300,7 @@ export default function GanttBoard({ sections, onTaskClick }: GanttBoardProps) {
         </div>
 
         {/* Timeline */}
-        <div className="gantt-timeline" ref={timelineRef} key={scheduleMode}>
+        <div className={`gantt-timeline ${panning ? 'panning' : ''}`} ref={timelineRef} key={scheduleMode} onMouseDown={handleTimelineMouseDown}>
           <div className="gantt-timeline-inner" style={{ width: timelineWidth, minHeight: contentHeight + HEADER_HEIGHT }}>
             {/* Header */}
             <div className="gantt-timeline-header" style={{ height: HEADER_HEIGHT }}>

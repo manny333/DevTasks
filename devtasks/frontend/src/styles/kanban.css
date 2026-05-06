@@ -590,7 +590,8 @@
   margin-left: 6px;
 }
 
-.gantt-timeline { flex: 1; overflow: auto; position: relative; }
+.gantt-timeline { flex: 1; overflow: auto; position: relative; cursor: grab; user-select: none; }
+.gantt-timeline.panning { cursor: grabbing; }
 .gantt-timeline-inner { position: relative; }
 .gantt-timeline-header {
   display: flex; position: sticky; top: 0; z-index: 2;
@@ -624,7 +625,6 @@
 }
 .gantt-bar:hover { opacity: 0.85; filter: brightness(1.1); }
 .gantt-bar-label {
-  font-size: 9px; font-weight: 500; color: #fff; padding: 0 6px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
