@@ -79,6 +79,7 @@
     "statusLabel": "Estado",
     "dueDate": "Fecha límite",
     "dueDateLabel": "Vence: {{date}}",
+    "startDate": "Fecha de inicio",
     "due": {
       "overdue": "Vencida",
       "today": "Vence hoy",
@@ -172,6 +173,17 @@
       "Sat": "Sáb",
       "Sun": "Dom"
     }
+  },
+  "gantt": {
+    "title": "Gantt",
+    "day": "Día",
+    "week": "Semana",
+    "month": "Mes",
+    "unscheduled": "Sin fecha",
+    "normal": "Normal",
+    "phases": "Fases",
+    "sequential": "Secuencial",
+    "empty": "No hay tareas con fecha límite. Agrega fechas límite a las tareas para verlas aquí."
   },
   "ai": {
     "title": "Importar con IA",

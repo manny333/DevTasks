@@ -66,6 +66,7 @@ Return ONLY valid JSON in this exact format:
           "tags": ["tag1", "tag2"],
           "assigneeEmails": ["user@example.com"],
           "subtasks": [{ "title": "Subtask title" }],
+          "startDate": "YYYY-MM-DD",
           "dueDate": "YYYY-MM-DD"
         }
       ]
@@ -77,9 +78,11 @@ Important:
 - Return ONLY the JSON object, no markdown code blocks, no explanation
 - Use double quotes for all strings
 - Every task must have at least a title
+- startDate and dueDate should both be present when time estimates are available
+- startDate should be the date the task begins (may be same as project start or later)
+- dueDate should be the date the task should be completed
 - Tags and assigneeEmails arrays can be empty
-- subtasks array can be empty
-- dueDate can be omitted if not applicable`;
+- subtasks array can be empty`;
 
   if (existingContext) {
     prompt += `\n\nThis is an EXISTING project. Prefer reusing existing sections, tags, and assignees when they semantically match. Only create new ones if absolutely necessary.

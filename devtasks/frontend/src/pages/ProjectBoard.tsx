@@ -6,6 +6,7 @@ import type { Project, Section, Tag, Task } from '../types';
 import Board from '../components/Kanban/Board';
 import CalendarBoard from '../components/Calendar/CalendarBoard';
 import ListView from '../components/ListView/ListView';
+import GanttBoard from '../components/Gantt/GanttBoard';
 import TaskModal from '../components/Kanban/TaskModal';
 import AIImportModal from '../components/AI/AIImportModal';
 import ManageTagsModal from '../components/Tags/ManageTagsModal';
@@ -31,7 +32,7 @@ export default function ProjectBoard() {
   const [pendingDeleteSection, setPendingDeleteSection] = useState<Section | null>(null);
   const deleteSectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showArchivedSections, setShowArchivedSections] = useState(false);
-  const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showAIImport, setShowAIImport] = useState(false);
   useEffect(() => {
@@ -274,6 +275,15 @@ export default function ProjectBoard() {
             </svg>
             {t('calendar.list')}
           </button>
+          <button
+            className={`calendar-view-btn ${viewMode === 'gantt' ? 'active' : ''}`}
+            onClick={() => setViewMode('gantt')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="6" width="18" height="15" rx="2"/><path d="M3 10h18"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/>
+            </svg>
+            {t('gantt.title')}
+          </button>
         </div>
 
         {viewMode === 'kanban' ? (
@@ -297,8 +307,13 @@ export default function ProjectBoard() {
             myAccess={project.myAccess}
             onTaskClick={(task) => setSelectedTask(task)}
           />
-        ) : (
+        ) : viewMode === 'list' ? (
           <ListView
+            sections={project.sections || []}
+            onTaskClick={(task) => setSelectedTask(task)}
+          />
+        ) : (
+          <GanttBoard
             sections={project.sections || []}
             onTaskClick={(task) => setSelectedTask(task)}
           />

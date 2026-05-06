@@ -14,7 +14,7 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
     if (!access) { res.status(403).json({ error: 'No access to this section' }); return; }
     if (!canEdit(access)) { res.status(403).json({ error: 'You have read-only access' }); return; }
 
-    const { title, description, status, dueDate } = req.body;
+    const { title, description, status, dueDate, startDate } = req.body;
     if (!title || typeof title !== 'string' || title.trim().length === 0) {
       res.status(400).json({ error: 'Title is required' });
       return;
@@ -30,6 +30,15 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
       }
       normalizedDueDate = parsed;
     }
+    let normalizedStartDate: Date | null = null;
+    if (startDate !== undefined && startDate !== null && `${startDate}`.trim() !== '') {
+      const parsed = new Date(startDate);
+      if (Number.isNaN(parsed.getTime())) {
+        res.status(400).json({ error: 'Invalid startDate' });
+        return;
+      }
+      normalizedStartDate = parsed;
+    }
 
     const last = await prisma.task.findFirst({
       where: { sectionId: req.params.sectionId as string, status: targetStatus },
@@ -40,6 +49,7 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
       data: {
         title: title.trim(),
         description: description || null,
+        startDate: normalizedStartDate,
         dueDate: normalizedDueDate,
         status: targetStatus,
         position: (last?.position ?? -1) + 1,

@@ -165,6 +165,7 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
           assignees: emails,
           subtasks,
           dueDate: typeof rt.dueDate === 'string' ? rt.dueDate : undefined,
+          startDate: typeof rt.startDate === 'string' ? rt.startDate : undefined,
           selected: true,
         });
       }
@@ -271,11 +272,17 @@ router.post('/apply', async (req: AuthRequest, res: Response): Promise<void> => 
           const d = new Date(task.dueDate);
           if (!Number.isNaN(d.getTime())) normalizedDue = d;
         }
+        let normalizedStart: Date | null = null;
+        if (task.startDate) {
+          const d = new Date(task.startDate);
+          if (!Number.isNaN(d.getTime())) normalizedStart = d;
+        }
 
         const created = await prisma.task.create({
           data: {
             title: task.title,
             description: task.description || null,
+            startDate: normalizedStart,
             dueDate: normalizedDue,
             status: 'TODO',
             position: (lastTask?.position ?? -1) + 1,

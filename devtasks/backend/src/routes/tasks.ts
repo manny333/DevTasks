@@ -12,7 +12,7 @@ router.use(authMiddleware);
 router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!await requireTaskAccess(req, res)) return;
-    const { title, description, dueDate } = req.body;
+    const { title, description, dueDate, startDate } = req.body;
     let normalizedDueDate: Date | null | undefined = undefined;
     if (dueDate !== undefined) {
       if (dueDate === null || `${dueDate}`.trim() === '') {
@@ -26,12 +26,26 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
         normalizedDueDate = parsed;
       }
     }
+    let normalizedStartDate: Date | null | undefined = undefined;
+    if (startDate !== undefined) {
+      if (startDate === null || `${startDate}`.trim() === '') {
+        normalizedStartDate = null;
+      } else {
+        const parsed = new Date(startDate);
+        if (Number.isNaN(parsed.getTime())) {
+          res.status(400).json({ error: 'Invalid startDate' });
+          return;
+        }
+        normalizedStartDate = parsed;
+      }
+    }
 
     const updated = await prisma.task.update({
       where: { id: req.params.id as string },
       data: {
         ...(title && { title: title.trim() }),
         ...(description !== undefined && { description }),
+        ...(normalizedStartDate !== undefined && { startDate: normalizedStartDate }),
         ...(normalizedDueDate !== undefined && { dueDate: normalizedDueDate }),
       },
       include: {

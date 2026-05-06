@@ -79,6 +79,7 @@
     "statusLabel": "Status",
     "dueDate": "Due date",
     "dueDateLabel": "Due: {{date}}",
+    "startDate": "Start date",
     "due": {
       "overdue": "Overdue",
       "today": "Due today",
@@ -191,6 +192,17 @@
       "Sat": "Sat",
       "Sun": "Sun"
     }
+  },
+  "gantt": {
+    "title": "Gantt",
+    "day": "Day",
+    "week": "Week",
+    "month": "Month",
+    "unscheduled": "No date",
+    "normal": "Normal",
+    "phases": "Phases",
+    "sequential": "Sequential",
+    "empty": "No tasks with due dates found. Add due dates to tasks to see them here."
   },
   "ai": {
     "title": "Import with AI",

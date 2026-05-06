@@ -20,6 +20,7 @@ interface ImportTask {
   tags: { name: string; action?: string }[];
   assignees: { email: string; name?: string; found?: boolean }[];
   subtasks: { title: string }[];
+  startDate?: string;
   dueDate?: string;
   selected: boolean;
 }
@@ -96,6 +97,7 @@ export default function AIImportPreview({ preview, onChange }: Props) {
                       ))}
                     </span>
                   )}
+                  {task.startDate && <span className="ai-preview-due">▶ {task.startDate}</span>}
                   {task.dueDate && <span className="ai-preview-due">📅 {task.dueDate}</span>}
                 </div>
                 {task.subtasks.length > 0 && (

@@ -45,6 +45,7 @@ export interface AIImportTask {
   tags: AIImportTag[];
   assignees: AIImportAssignee[];
   subtasks: AIImportSubtask[];
+  startDate?: string;
   dueDate?: string;
   selected: boolean;
 }

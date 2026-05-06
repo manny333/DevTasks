@@ -31,6 +31,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
   const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '');
+  const [startDate, setStartDate] = useState(task.startDate ? task.startDate.slice(0, 10) : '');
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [mentionedUserIds, setMentionedUserIds] = useState<Set<string>>(new Set());
@@ -199,8 +200,9 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     setTitle(task.title);
     setDescription(task.description || '');
     setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
+    setStartDate(task.startDate ? task.startDate.slice(0, 10) : '');
     setSaveState('idle');
-  }, [task.id, task.title, task.description, task.dueDate]);
+  }, [task.id, task.title, task.description, task.dueDate, task.startDate]);
 
   const handleFiles = async (files: File[]) => {
     if (!files.length) return;
@@ -291,7 +293,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     };
   }, []);
 
-  const persistTask = async (payload: { title?: string; description?: string; dueDate?: string | null }) => {
+  const persistTask = async (payload: { title?: string; description?: string; dueDate?: string | null; startDate?: string | null }) => {
     setSaveState('saving');
     try {
       const res = await api.patch(`/tasks/${task.id}`, payload);
@@ -308,7 +310,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
 
   useEffect(() => {
     if (!editing || !canEdit) return;
-    if (title === task.title && description === (task.description || '') && dueDate === (task.dueDate ? task.dueDate.slice(0, 10) : '')) return;
+    if (title === task.title && description === (task.description || '') && dueDate === (task.dueDate ? task.dueDate.slice(0, 10) : '') && startDate === (task.startDate ? task.startDate.slice(0, 10) : '')) return;
 
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
@@ -316,6 +318,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
         title: title.trim(),
         description: description.trim() || '',
         dueDate: dueDate || null,
+        startDate: startDate || null,
       });
     }, 700);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -328,6 +331,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
         title: title.trim(),
         description: description.trim() || '',
         dueDate: dueDate || null,
+        startDate: startDate || null,
       });
       setEditing(false);
     } finally {
@@ -473,6 +477,23 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               </span>
             </>
           )}
+          <span className="task-modal-meta-sep" />
+          <span className="task-modal-meta-item">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            {editing ? (
+              <input
+                className="task-modal-meta-due-input"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                title={t('tasks.startDate')}
+              />
+            ) : (
+              <span className="task-modal-meta-text">{task.startDate ? new Date(task.startDate).toLocaleDateString() : t('tasks.startDate')}</span>
+            )}
+          </span>
           <span className="task-modal-meta-sep" />
           <span className="task-modal-meta-item">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
