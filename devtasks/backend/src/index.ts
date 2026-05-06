@@ -17,6 +17,7 @@ import searchRoutes from './routes/search';
 import attachmentRoutes from './routes/attachments';
 import notificationRoutes from './routes/notifications';
 import calendarRoutes from './routes/calendar';
+import aiRoutes from './routes/ai';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -47,6 +48,7 @@ app.use('/api/templates', templateCrudRoutes); // /api/templates/:id (PATCH, DEL
 app.use('/api/search', searchRoutes);     // /api/search?q=query
 app.use('/api/notifications', notificationRoutes); // /api/notifications
 app.use('/api/projects', calendarRoutes);  // /api/projects/:projectId/calendar
+app.use('/api/ai', aiRoutes);           // /api/ai/*
 
 // Health check
 app.get('/api/health', (_req, res) => {

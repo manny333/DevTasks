@@ -192,6 +192,30 @@
       "Sun": "Sun"
     }
   },
+  "ai": {
+    "title": "Import with AI",
+    "importButton": "AI Import",
+    "placeholder": "Paste your markdown here, or drag & drop a .md file...\n\n# Project Name\n\n## Section 1\n- Task 1\n- Task 2\n\n## Section 2\n- Task 3 (due: 2026-06-01)",
+    "dropHint": "Drop a .md file or paste content",
+    "browse": "Browse file",
+    "generate": "Generate Preview",
+    "generating": "Analyzing...",
+    "import": "Import Tasks",
+    "importing": "Importing...",
+    "importSuccess": "Import complete!",
+    "previewSummary": "{{sections}} sections, {{tasks}}/{{total}} tasks selected",
+    "existing": "existing",
+    "new": "new",
+    "tasks": "tasks",
+    "sectionsCreated": "sections",
+    "tasksCreated": "tasks",
+    "tagsCreated": "tags",
+    "assigneesCreated": "assignees",
+    "errorGenerate": "Failed to generate preview. Check your API key or try again.",
+    "errorApply": "Failed to import tasks.",
+    "apiKeyPlaceholder": "Paste your API key...",
+    "noProviders": "No AI providers configured. Set AI_DEEPSEEK_API_KEY or paste a key below."
+  },
   "activity": {
     "title": "Activity",
     "empty": "No activity recorded for this task yet.",

@@ -7,6 +7,7 @@ import Board from '../components/Kanban/Board';
 import CalendarBoard from '../components/Calendar/CalendarBoard';
 import ListView from '../components/ListView/ListView';
 import TaskModal from '../components/Kanban/TaskModal';
+import AIImportModal from '../components/AI/AIImportModal';
 import ManageTagsModal from '../components/Tags/ManageTagsModal';
 import ManageMembersModal from '../components/Members/ManageMembersModal';
 import UndoToast from '../components/UndoToast';
@@ -32,6 +33,7 @@ export default function ProjectBoard() {
   const [showArchivedSections, setShowArchivedSections] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showAIImport, setShowAIImport] = useState(false);
   useEffect(() => {
     if (!slug) return;
     api
@@ -230,6 +232,14 @@ export default function ProjectBoard() {
             🏷 {t('tags.title')}
           </button>
         )}
+        {canEdit && (
+          <button className="add-section-btn" onClick={() => setShowAIImport(true)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            {t('ai.importButton')}
+          </button>
+        )}
       </aside>
 
       {/* Board area */}
@@ -331,6 +341,19 @@ export default function ProjectBoard() {
           message={`Sección "${pendingDeleteSection.name}" eliminada`}
           onUndo={undoDeleteSection}
           onDismiss={() => setPendingDeleteSection(null)}
+        />
+      )}
+
+      {showAIImport && (
+        <AIImportModal
+          projectId={project.id}
+          onClose={() => setShowAIImport(false)}
+          onImported={() => {
+            setShowAIImport(false);
+            if (slug) {
+              api.get(`/projects/${slug}`).then(res => setProject(res.data));
+            }
+          }}
         />
       )}
     </div>

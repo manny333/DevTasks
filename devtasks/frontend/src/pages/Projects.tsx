@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import type { Project } from '../types';
+import AIImportModal from '../components/AI/AIImportModal';
 
 const PROJECT_COLORS = ['#6366f1', '#f59e0b', '#22c55e', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
 const getProjectColor = (name: string) => PROJECT_COLORS[name.charCodeAt(0) % PROJECT_COLORS.length];
@@ -15,6 +16,7 @@ export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAIImport, setShowAIImport] = useState(false);
   const [form, setForm] = useState({ name: '', description: '' });
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
@@ -102,9 +104,17 @@ export default function Projects() {
           </h1>
           <p className="projects-page-subtitle">{t('projects.subtitle')}</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowCreate(true)}>
-          + {t('projects.create')}
-        </button>
+        <div className="projects-page-actions">
+          <button className="btn-primary" onClick={() => setShowCreate(true)}>
+            + {t('projects.create')}
+          </button>
+          <button className="btn-ai" onClick={() => setShowAIImport(true)}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            {t('ai.importButton')}
+          </button>
+        </div>
       </div>
 
       {/* Empty state */}
@@ -353,6 +363,10 @@ export default function Projects() {
             </form>
           </div>
         </div>
+      )}
+
+      {showAIImport && (
+        <AIImportModal onClose={() => setShowAIImport(false)} onImported={() => { setShowAIImport(false); api.get('/projects').then(res => setProjects(res.data)); }} />
       )}
     </div>
   );

@@ -173,6 +173,30 @@
       "Sun": "Dom"
     }
   },
+  "ai": {
+    "title": "Importar con IA",
+    "importButton": "Importar IA",
+    "placeholder": "Pega tu markdown aquí, o arrastra un archivo .md...\n\n# Nombre del Proyecto\n\n## Sección 1\n- Tarea 1\n- Tarea 2\n\n## Sección 2\n- Tarea 3 (vence: 2026-06-01)",
+    "dropHint": "Suelta un archivo .md o pega contenido",
+    "browse": "Buscar archivo",
+    "generate": "Generar Preview",
+    "generating": "Analizando...",
+    "import": "Importar Tareas",
+    "importing": "Importando...",
+    "importSuccess": "¡Importación completa!",
+    "previewSummary": "{{sections}} secciones, {{tasks}}/{{total}} tareas seleccionadas",
+    "existing": "existente",
+    "new": "nueva",
+    "tasks": "tareas",
+    "sectionsCreated": "secciones",
+    "tasksCreated": "tareas",
+    "tagsCreated": "etiquetas",
+    "assigneesCreated": "asignaciones",
+    "errorGenerate": "Error al generar preview. Revisa tu API key o intenta de nuevo.",
+    "errorApply": "Error al importar tareas.",
+    "apiKeyPlaceholder": "Pega tu API key...",
+    "noProviders": "Sin proveedores IA configurados. Configura AI_DEEPSEEK_API_KEY o pega una key abajo."
+  },
   "activity": {
     "title": "Actividad",
     "empty": "Aún no hay actividad registrada para esta tarea.",
