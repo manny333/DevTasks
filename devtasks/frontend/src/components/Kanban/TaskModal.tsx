@@ -657,6 +657,103 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
           {assigneeError && <p className="member-error">{assigneeError}</p>}
         </div>
 
+        {/* Subtasks / Checklist */}
+        <div className="task-modal-subtasks">
+          <div className="task-modal-subtasks-header">
+            <h3 className="task-modal-subtasks-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 11 12 14 22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              {t('subtasks.title')}
+              {subtaskStats.total > 0 && (
+                <span className="attachment-count">{subtaskStats.done}/{subtaskStats.total}</span>
+              )}
+            </h3>
+            {subtaskStats.total > 0 && (
+              <span className="task-modal-subtasks-pct">{subtaskStats.pct}%</span>
+            )}
+          </div>
+
+          {subtaskStats.total > 0 && (
+            <div className="task-subtasks-progress-track">
+              <div
+                className="task-subtasks-progress-fill"
+                style={{ width: `${subtaskStats.pct}%` }}
+              />
+            </div>
+          )}
+
+          {subtasks.length > 0 && (
+            <ul className="task-subtasks-list">
+              {subtasks.map((s) => (
+                <li key={s.id} className={`task-subtask-item${s.completed ? ' completed' : ''}`}>
+                  <label className="task-subtask-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={s.completed}
+                      disabled={!canEdit}
+                      onChange={() => toggleSubtask(s)}
+                    />
+                    <span className="task-subtask-checkbox-custom" aria-hidden>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    </span>
+                  </label>
+                  {editingSubtaskId === s.id ? (
+                    <input
+                      className="task-subtask-title-input"
+                      value={editingSubtaskTitle}
+                      autoFocus
+                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                      onBlur={() => saveSubtaskTitle(s.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); saveSubtaskTitle(s.id); }
+                        if (e.key === 'Escape') { setEditingSubtaskId(null); setEditingSubtaskTitle(''); }
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="task-subtask-title"
+                      onClick={() => {
+                        if (!canEdit) return;
+                        setEditingSubtaskId(s.id);
+                        setEditingSubtaskTitle(s.title);
+                      }}
+                    >{s.title}</span>
+                  )}
+                  {canEdit && (
+                    <button
+                      className="task-subtask-delete"
+                      title={t('subtasks.delete')}
+                      onClick={() => deleteSubtask(s.id)}
+                    >×</button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {canEdit && (
+            <form className="task-subtask-add-form" onSubmit={addSubtask}>
+              <input
+                type="text"
+                className="task-subtask-add-input"
+                placeholder={t('subtasks.placeholder')}
+                value={subtaskInput}
+                onChange={(e) => setSubtaskInput(e.target.value)}
+                disabled={subtaskAdding}
+              />
+              <button
+                type="submit"
+                className="task-subtask-add-btn"
+                disabled={!subtaskInput.trim() || subtaskAdding}
+              >{t('subtasks.add')}</button>
+            </form>
+          )}
+        </div>
+
         {/* Attachments */}
         <div className="task-modal-section-collapse">
           <div className="task-modal-section-collapse-header" onClick={() => setAttachmentsExpanded(!attachmentsExpanded)}>
@@ -810,103 +907,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
                 />
               )}
             </div>
-          )}
-        </div>
-
-        {/* Subtasks / Checklist */}
-        <div className="task-modal-subtasks">
-          <div className="task-modal-subtasks-header">
-            <h3 className="task-modal-subtasks-title">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 11 12 14 22 4"/>
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-              </svg>
-              {t('subtasks.title')}
-              {subtaskStats.total > 0 && (
-                <span className="attachment-count">{subtaskStats.done}/{subtaskStats.total}</span>
-              )}
-            </h3>
-            {subtaskStats.total > 0 && (
-              <span className="task-modal-subtasks-pct">{subtaskStats.pct}%</span>
-            )}
-          </div>
-
-          {subtaskStats.total > 0 && (
-            <div className="task-subtasks-progress-track">
-              <div
-                className="task-subtasks-progress-fill"
-                style={{ width: `${subtaskStats.pct}%` }}
-              />
-            </div>
-          )}
-
-          {subtasks.length > 0 && (
-            <ul className="task-subtasks-list">
-              {subtasks.map((s) => (
-                <li key={s.id} className={`task-subtask-item${s.completed ? ' completed' : ''}`}>
-                  <label className="task-subtask-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={s.completed}
-                      disabled={!canEdit}
-                      onChange={() => toggleSubtask(s)}
-                    />
-                    <span className="task-subtask-checkbox-custom" aria-hidden>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                    </span>
-                  </label>
-                  {editingSubtaskId === s.id ? (
-                    <input
-                      className="task-subtask-title-input"
-                      value={editingSubtaskTitle}
-                      autoFocus
-                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
-                      onBlur={() => saveSubtaskTitle(s.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') { e.preventDefault(); saveSubtaskTitle(s.id); }
-                        if (e.key === 'Escape') { setEditingSubtaskId(null); setEditingSubtaskTitle(''); }
-                      }}
-                    />
-                  ) : (
-                    <span
-                      className="task-subtask-title"
-                      onClick={() => {
-                        if (!canEdit) return;
-                        setEditingSubtaskId(s.id);
-                        setEditingSubtaskTitle(s.title);
-                      }}
-                    >{s.title}</span>
-                  )}
-                  {canEdit && (
-                    <button
-                      className="task-subtask-delete"
-                      title={t('subtasks.delete')}
-                      onClick={() => deleteSubtask(s.id)}
-                    >×</button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {canEdit && (
-            <form className="task-subtask-add-form" onSubmit={addSubtask}>
-              <input
-                type="text"
-                className="task-subtask-add-input"
-                placeholder={t('subtasks.placeholder')}
-                value={subtaskInput}
-                onChange={(e) => setSubtaskInput(e.target.value)}
-                disabled={subtaskAdding}
-              />
-              <button
-                type="submit"
-                className="task-subtask-add-btn"
-                disabled={!subtaskInput.trim() || subtaskAdding}
-              >{t('subtasks.add')}</button>
-            </form>
           )}
         </div>
 

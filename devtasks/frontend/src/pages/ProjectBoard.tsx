@@ -233,8 +233,8 @@ export default function ProjectBoard() {
           </button>
         )}
         {canEdit && (
-          <button className="add-section-btn" onClick={() => setShowAIImport(true)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+          <button className="btn-ai" onClick={() => setShowAIImport(true)} style={{ width: 'calc(100% - 16px)', margin: '4px 8px 0', justifyContent: 'center', fontSize: 12, height: 32 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
             </svg>
             {t('ai.importButton')}
