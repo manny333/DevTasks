@@ -8,9 +8,13 @@ import type { AIImportPreview, AIImportSection, AIImportTask } from '../lib/ai/t
 const router = Router();
 router.use(authMiddleware);
 
-// GET /api/ai/providers — list available AI providers
-router.get('/providers', (_req, res: Response) => {
-  res.json(getAvailableProviders());
+// GET /api/ai/providers — list available AI providers (env + user keys)
+router.get('/providers', async (req: AuthRequest, res: Response) => {
+  const userKeys = await prisma.userApiKey.findMany({
+    where: { userId: req.userId!, isActive: true },
+    select: { provider: true, label: true },
+  });
+  res.json(getAvailableProviders(userKeys));
 });
 
 // POST /api/ai/preview — generate import preview from markdown
@@ -24,6 +28,22 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     const provider = providerId || 'deepseek';
+
+    // Resolve API key: user-provided > user saved key > env var
+    let resolvedApiKey = apiKey;
+    if (!resolvedApiKey) {
+      const userKey = await prisma.userApiKey.findUnique({
+        where: { userId_provider: { userId: req.userId!, provider } },
+      });
+      if (userKey) resolvedApiKey = userKey.apiKey;
+    }
+    if (!resolvedApiKey) {
+      resolvedApiKey = process.env[`AI_${provider.toUpperCase()}_API_KEY`];
+    }
+    if (!resolvedApiKey) {
+      res.status(400).json({ error: `No API key configured for ${provider}. Add one in Settings or via environment variable.` });
+      return;
+    }
 
     let context: {
       sections?: { id: string; name: string; color: string }[];
@@ -49,7 +69,7 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
       }
     }
 
-    const ai = createProvider(provider, apiKey, baseUrl);
+    const ai = createProvider(provider, resolvedApiKey, baseUrl);
     const systemPrompt = buildSystemPrompt(context);
     const userPrompt = buildUserPrompt(markdown.trim());
 

@@ -18,6 +18,7 @@ import attachmentRoutes from './routes/attachments';
 import notificationRoutes from './routes/notifications';
 import calendarRoutes from './routes/calendar';
 import aiRoutes from './routes/ai';
+import userSettingsRoutes from './routes/userSettings';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -49,6 +50,7 @@ app.use('/api/search', searchRoutes);     // /api/search?q=query
 app.use('/api/notifications', notificationRoutes); // /api/notifications
 app.use('/api/projects', calendarRoutes);  // /api/projects/:projectId/calendar
 app.use('/api/ai', aiRoutes);           // /api/ai/*
+app.use('/api/user', userSettingsRoutes); // /api/user/ai-keys
 
 // Health check
 app.get('/api/health', (_req, res) => {

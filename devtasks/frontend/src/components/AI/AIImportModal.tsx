@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import AIImportPreview from './AIImportPreview';
@@ -13,6 +14,8 @@ interface Provider {
   id: string;
   label: string;
   model: string;
+  hasKey: boolean;
+  hasUserKey: boolean;
 }
 
 interface PreviewSection {
@@ -28,23 +31,24 @@ interface PreviewSection {
 
 export default function AIImportModal({ projectId, onClose, onImported }: Props) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const overlayRef = useRef<HTMLDivElement>(null);
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [markdown, setMarkdown] = useState('');
   const [providers, setProviders] = useState<Provider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState('deepseek');
+  const [selectedProvider, setSelectedProvider] = useState('');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<{ sections: PreviewSection[] } | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ sections: number; tasks: number; tags: number; assignees: number } | null>(null);
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('kanvy_ai_key') || '');
-  const [showKey, setShowKey] = useState(false);
 
   useEffect(() => {
     api.get('/ai/providers').then(res => {
-      setProviders(res.data);
-      if (res.data.length > 0) setSelectedProvider(res.data[0].id);
+      const list = res.data as Provider[];
+      setProviders(list);
+      const configured = list.find(p => p.hasKey);
+      setSelectedProvider(configured?.id || list[0]?.id || '');
     }).catch(() => {});
   }, []);
 
@@ -63,7 +67,6 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
         markdown: markdown.trim(),
         projectId: projectId || undefined,
         provider: selectedProvider,
-        ...(apiKey ? { apiKey } : {}),
       });
       setPreview(res.data);
       setStep('preview');
@@ -115,6 +118,8 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
     reader.readAsText(file);
   };
 
+  const selectedHasKey = providers.find(p => p.id === selectedProvider)?.hasKey;
+
   return (
     <div className="modal-overlay" ref={overlayRef}>
       <div className="modal ai-modal">
@@ -147,26 +152,28 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
         ) : step === 'input' ? (
           <div className="ai-input">
             <div className="ai-input-top">
-              {providers.length > 0 && (
+              {providers.length > 0 ? (
                 <select className="ai-provider-select" value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}>
-                  {providers.map(p => <option key={p.id} value={p.id}>{p.label} ({p.model})</option>)}
+                  {providers.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.hasKey ? '● ' : '○ '}{p.label} ({p.model}){p.hasUserKey ? ` — ${t('settings.saved')}` : ''}
+                    </option>
+                  ))}
                 </select>
+              ) : (
+                <span className="ai-no-provider">{t('ai.noProviders')}</span>
               )}
-              {providers.length === 0 && <span className="ai-no-provider">{t('ai.noProviders')}</span>}
-              <div className="ai-key-wrap">
-                <input
-                  className="ai-key-input"
-                  type={showKey ? 'text' : 'password'}
-                  placeholder={t('ai.apiKeyPlaceholder')}
-                  value={apiKey}
-                  onChange={e => { setApiKey(e.target.value); localStorage.setItem('kanvy_ai_key', e.target.value); }}
-                />
-                <button type="button" className="ai-key-toggle" onClick={() => setShowKey(!showKey)} title={showKey ? 'Hide' : 'Show'}>
-                  {showKey ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  )}
+              <div className="ai-config-area">
+                {selectedHasKey ? (
+                  <span className="ai-status-ok">{t('ai.configured')}</span>
+                ) : (
+                  <span className="ai-status-missing">{t('ai.notConfigured')}</span>
+                )}
+                <button type="button" className="ai-config-link" onClick={() => { onClose(); navigate('/settings'); }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                  {t('ai.configureKeys')}
                 </button>
               </div>
             </div>
@@ -202,7 +209,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
             {error && <p className="ai-error">{error}</p>}
 
             <div className="ai-input-actions">
-              <button className="btn-primary" onClick={generate} disabled={!markdown.trim() || generating}>
+              <button className="btn-primary" onClick={generate} disabled={!markdown.trim() || generating || !selectedHasKey}>
                 {generating ? (
                   <><span className="ai-spinner" />{t('ai.generating')}</>
                 ) : t('ai.generate')}

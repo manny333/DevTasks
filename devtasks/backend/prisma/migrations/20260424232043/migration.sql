@@ -1,2 +1,2 @@
 -- DropIndex
-DROP INDEX "Subtask_taskId_idx";
+DROP INDEX IF EXISTS "Subtask_taskId_idx";

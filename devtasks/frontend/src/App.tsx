@@ -8,6 +8,7 @@ import Navbar from './components/Layout/Navbar';
 import Login from './pages/Login';
 import Projects from './pages/Projects';
 import ProjectBoard from './pages/ProjectBoard';
+import Settings from './pages/Settings';
 import SearchModal from './components/Search/SearchModal';
 import { useState, useEffect } from 'react';
 import './i18n';
@@ -55,6 +56,7 @@ export default function App() {
                         <Routes>
                           <Route path="/projects" element={<Projects />} />
                           <Route path="/projects/:slug" element={<ProjectBoard />} />
+                          <Route path="/settings" element={<Settings />} />
                           <Route path="/" element={<Navigate to="/projects" replace />} />
                         </Routes>
                       </main>

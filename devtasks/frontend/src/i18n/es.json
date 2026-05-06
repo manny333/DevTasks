@@ -195,7 +195,23 @@
     "errorGenerate": "Error al generar preview. Revisa tu API key o intenta de nuevo.",
     "errorApply": "Error al importar tareas.",
     "apiKeyPlaceholder": "Pega tu API key...",
-    "noProviders": "Sin proveedores IA configurados. Configura AI_DEEPSEEK_API_KEY o pega una key abajo."
+    "noProviders": "Sin proveedores IA configurados. Configura AI_DEEPSEEK_API_KEY o pega una key abajo.",
+    "configured": "Listo",
+    "notConfigured": "Sin API key",
+    "configureKeys": "Configurar"
+  },
+  "settings": {
+    "title": "Configuración",
+    "aiKeys": "API Keys de IA",
+    "aiKeysDesc": "Configura tus API keys personales para funciones de IA. Las keys se almacenan de forma segura. Déjalo vacío para usar la configuración por defecto del servidor.",
+    "saved": "Guardada",
+    "pasteKey": "Pega tu API key...",
+    "enterNewKey": "Ingresa nueva key...",
+    "deleteKey": "Eliminar key",
+    "keySaved": "API key guardada correctamente.",
+    "keyDeleted": "API key eliminada.",
+    "errorSave": "Error al guardar la API key.",
+    "errorDelete": "Error al eliminar la API key."
   },
   "activity": {
     "title": "Actividad",

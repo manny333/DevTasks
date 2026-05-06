@@ -214,7 +214,23 @@
     "errorGenerate": "Failed to generate preview. Check your API key or try again.",
     "errorApply": "Failed to import tasks.",
     "apiKeyPlaceholder": "Paste your API key...",
-    "noProviders": "No AI providers configured. Set AI_DEEPSEEK_API_KEY or paste a key below."
+    "noProviders": "No AI providers configured. Set AI_DEEPSEEK_API_KEY or paste a key below.",
+    "configured": "Ready",
+    "notConfigured": "API key not set",
+    "configureKeys": "Configure"
+  },
+  "settings": {
+    "title": "Settings",
+    "aiKeys": "AI API Keys",
+    "aiKeysDesc": "Configure your personal API keys for AI features. Keys are stored securely and never shared. Leave empty to use the server default.",
+    "saved": "Saved",
+    "pasteKey": "Paste API key...",
+    "enterNewKey": "Enter new key...",
+    "deleteKey": "Remove key",
+    "keySaved": "API key saved successfully.",
+    "keyDeleted": "API key removed.",
+    "errorSave": "Failed to save API key.",
+    "errorDelete": "Failed to remove API key."
   },
   "activity": {
     "title": "Activity",

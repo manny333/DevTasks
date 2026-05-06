@@ -79,6 +79,7 @@ model User {
   comments         Comment[]
   notifications    Notification[]   @relation("UserNotifications")
   activities       ActivityLog[]    @relation("UserActivities")
+  apiKeys          UserApiKey[]
 }
 
 model Project {
@@ -288,4 +289,18 @@ model ActivityLog {
 
   @@index([taskId])
   @@index([projectId])
+}
+
+model UserApiKey {
+  id        String   @id @default(cuid())
+  provider  String
+  apiKey    String
+  label     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
 }
