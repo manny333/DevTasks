@@ -217,7 +217,10 @@
     "noProviders": "No AI providers configured. Set AI_DEEPSEEK_API_KEY or paste a key below.",
     "configured": "Ready",
     "notConfigured": "API key not set",
-    "configureKeys": "Configure"
+    "configureKeys": "Configure",
+    "projectName": "Project name",
+    "projectNamePlaceholder": "Optional, AI will suggest if empty",
+    "startDate": "Start date"
   },
   "settings": {
     "title": "Settings",
@@ -230,7 +233,11 @@
     "keySaved": "API key saved successfully.",
     "keyDeleted": "API key removed.",
     "errorSave": "Failed to save API key.",
-    "errorDelete": "Failed to remove API key."
+    "errorDelete": "Failed to remove API key.",
+    "workConfig": "Work Schedule",
+    "workConfigDesc": "Used to calculate task due dates when importing with AI. Changes apply to future imports.",
+    "hoursPerDay": "Hours per day",
+    "workDays": "Working days"
   },
   "activity": {
     "title": "Activity",

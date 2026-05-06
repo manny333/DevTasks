@@ -62,6 +62,7 @@ export interface AIImportSection {
 
 export interface AIImportPreview {
   sections: AIImportSection[];
+  projectName?: string;
 }
 
 export interface AIConfig {

@@ -401,6 +401,16 @@
   white-space: nowrap;
 }
 .ai-config-link:hover { opacity: 0.8; }
+
+.ai-meta-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.ai-meta-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 160px; }
+.ai-meta-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.ai-meta-input {
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-tertiary); color: var(--text-primary); font-size: 12px;
+}
+.ai-meta-input:focus { outline: none; border-color: var(--accent); }
+.ai-meta-input::placeholder { color: var(--text-muted); }
 .ai-key-wrap { display: flex; align-items: center; gap: 0; }
 .ai-key-input {
   padding: 6px 10px; border-radius: 8px 0 0 8px;
@@ -433,7 +443,7 @@
 }
 .ai-preview-section-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ai-preview-check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
-.ai-preview-check input { accent-color: var(--accent); }
+.ai-preview-check input { accent-color: var(--accent); width: 14px; height: 14px; margin: 0; flex-shrink: 0; cursor: pointer; }
 .ai-preview-section-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .ai-badge { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 8px; }
 .ai-badge-new { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
@@ -519,6 +529,22 @@
 }
 .settings-key-toggle:hover { color: var(--text-primary); }
 .btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
+
+.settings-work-config { display: flex; flex-direction: column; gap: 16px; }
+.settings-work-field { display: flex; flex-direction: column; gap: 6px; }
+.settings-hours-input { display: flex; align-items: center; gap: 8px; }
+.settings-hours-value { font-size: 15px; font-weight: 700; min-width: 36px; text-align: center; }
+.settings-days-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.settings-day-chip {
+  padding: 5px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--bg-secondary); color: var(--text-muted);
+  font-size: 11px; font-weight: 500; cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.settings-day-chip:hover { border-color: var(--accent); }
+.settings-day-chip.active {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
 
 /* ─── AI Button ─────────────────────────────────────── */
 .btn-ai {

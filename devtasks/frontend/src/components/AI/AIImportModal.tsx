@@ -39,9 +39,12 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
   const [selectedProvider, setSelectedProvider] = useState('');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
-  const [preview, setPreview] = useState<{ sections: PreviewSection[] } | null>(null);
+  const [preview, setPreview] = useState<{ sections: PreviewSection[]; projectName?: string } | null>(null);
+  const [generatedProjectName, setGeneratedProjectName] = useState('');
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ sections: number; tasks: number; tags: number; assignees: number } | null>(null);
+  const [projectName, setProjectName] = useState('');
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     api.get('/ai/providers').then(res => {
@@ -67,8 +70,13 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
         markdown: markdown.trim(),
         projectId: projectId || undefined,
         provider: selectedProvider,
+        projectName: projectName.trim() || undefined,
+        startDate: startDate || undefined,
       });
       setPreview(res.data);
+      if (res.data.projectName && !projectName.trim()) {
+        setGeneratedProjectName(res.data.projectName);
+      }
       setStep('preview');
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || t('ai.errorGenerate'));
@@ -86,8 +94,8 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
 
       if (!targetProjectId) {
         const selectedSections = preview.sections.filter(s => s.selected);
-        const projectName = selectedSections[0]?.name || 'Imported Project';
-        const createRes = await api.post('/projects', { name: projectName, template: 'blank' });
+        const name = projectName.trim() || generatedProjectName || selectedSections[0]?.name || 'Imported Project';
+        const createRes = await api.post('/projects', { name, template: 'blank' });
         targetProjectId = createRes.data.id;
       }
 
@@ -175,6 +183,28 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
                   </svg>
                   {t('ai.configureKeys')}
                 </button>
+              </div>
+            </div>
+
+            <div className="ai-meta-row">
+              <div className="ai-meta-field">
+                <label className="ai-meta-label">{t('ai.projectName')}</label>
+                <input
+                  className="ai-meta-input"
+                  type="text"
+                  placeholder={t('ai.projectNamePlaceholder')}
+                  value={projectName}
+                  onChange={e => setProjectName(e.target.value)}
+                />
+              </div>
+              <div className="ai-meta-field">
+                <label className="ai-meta-label">{t('ai.startDate')}</label>
+                <input
+                  className="ai-meta-input"
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                />
               </div>
             </div>
 

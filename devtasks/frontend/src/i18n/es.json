@@ -198,7 +198,10 @@
     "noProviders": "Sin proveedores IA configurados. Configura AI_DEEPSEEK_API_KEY o pega una key abajo.",
     "configured": "Listo",
     "notConfigured": "Sin API key",
-    "configureKeys": "Configurar"
+    "configureKeys": "Configurar",
+    "projectName": "Nombre del proyecto",
+    "projectNamePlaceholder": "Opcional, la IA sugerirá si está vacío",
+    "startDate": "Fecha de inicio"
   },
   "settings": {
     "title": "Configuración",
@@ -211,7 +214,11 @@
     "keySaved": "API key guardada correctamente.",
     "keyDeleted": "API key eliminada.",
     "errorSave": "Error al guardar la API key.",
-    "errorDelete": "Error al eliminar la API key."
+    "errorDelete": "Error al eliminar la API key.",
+    "workConfig": "Horario de trabajo",
+    "workConfigDesc": "Usado para calcular fechas límite al importar con IA. Los cambios aplican a futuras importaciones.",
+    "hoursPerDay": "Horas por día",
+    "workDays": "Días laborales"
   },
   "activity": {
     "title": "Actividad",

@@ -26,6 +26,30 @@ export default function Settings() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Work config
+  const [hoursPerDay, setHoursPerDay] = useState(() => Number(localStorage.getItem('kanvy_hours')) || 8);
+  const [workDays, setWorkDays] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('kanvy_workdays');
+    return saved ? new Set(JSON.parse(saved)) : new Set(['Mon', 'Tue', 'Wed', 'Thu', 'Fri']);
+  });
+
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  const toggleWorkDay = (d: string) => {
+    setWorkDays(prev => {
+      const next = new Set(prev);
+      if (next.has(d)) next.delete(d); else next.add(d);
+      localStorage.setItem('kanvy_workdays', JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const saveHours = (h: number) => {
+    const val = Math.max(1, Math.min(16, h));
+    setHoursPerDay(val);
+    localStorage.setItem('kanvy_hours', String(val));
+  };
+
   useEffect(() => {
     api.get('/user/ai-keys').then(res => {
       setSavedKeys(res.data);
@@ -78,6 +102,36 @@ export default function Settings() {
     <div className="settings-page">
       <div className="settings-container">
         <h1 className="settings-title">{t('settings.title')}</h1>
+
+        <section className="settings-section">
+          <h2 className="settings-section-title">{t('settings.workConfig')}</h2>
+          <p className="settings-section-desc">{t('settings.workConfigDesc')}</p>
+
+          <div className="settings-work-config">
+            <div className="settings-work-field">
+              <label className="ai-meta-label">{t('settings.hoursPerDay')}</label>
+              <div className="settings-hours-input">
+                <button className="btn-secondary btn-sm" onClick={() => saveHours(hoursPerDay - 1)}>−</button>
+                <span className="settings-hours-value">{hoursPerDay}h</span>
+                <button className="btn-secondary btn-sm" onClick={() => saveHours(hoursPerDay + 1)}>+</button>
+              </div>
+            </div>
+            <div className="settings-work-field">
+              <label className="ai-meta-label">{t('settings.workDays')}</label>
+              <div className="settings-days-row">
+                {DAYS.map(d => (
+                  <button
+                    key={d}
+                    className={`settings-day-chip ${workDays.has(d) ? 'active' : ''}`}
+                    onClick={() => toggleWorkDay(d)}
+                  >
+                    {t(`calendar.days.${d}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section className="settings-section">
           <h2 className="settings-section-title">{t('settings.aiKeys')}</h2>

@@ -20,7 +20,7 @@ router.get('/providers', async (req: AuthRequest, res: Response) => {
 // POST /api/ai/preview — generate import preview from markdown
 router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { markdown, projectId, provider: providerId, model, apiKey, baseUrl } = req.body;
+    const { markdown, projectId, provider: providerId, model, apiKey, baseUrl, projectName, startDate } = req.body;
 
     if (!markdown || typeof markdown !== 'string' || markdown.trim().length === 0) {
       res.status(400).json({ error: 'markdown is required' });
@@ -70,8 +70,10 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     const ai = createProvider(provider, resolvedApiKey, baseUrl);
-    const systemPrompt = buildSystemPrompt(context);
-    const userPrompt = buildUserPrompt(markdown.trim());
+    const systemPrompt = buildSystemPrompt(context, {
+      startDate: typeof startDate === 'string' ? startDate : undefined,
+    });
+    const userPrompt = buildUserPrompt(markdown.trim(), typeof projectName === 'string' ? projectName : undefined);
 
     const response = await ai.chat(
       [
@@ -121,6 +123,7 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     const rawSections = Array.isArray(parsed.sections) ? parsed.sections : [];
+    const generatedProjectName = typeof parsed.projectName === 'string' ? parsed.projectName : undefined;
     const PREVIEW_COLORS = ['#6366f1', '#f59e0b', '#22c55e', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#ef4444', '#84cc16'];
 
     // Normalize and build preview with tempIds
@@ -190,7 +193,7 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
       }
     }
 
-    const result: AIImportPreview = { sections: preview };
+    const result: AIImportPreview = { sections: preview, projectName: generatedProjectName };
     res.json(result);
   } catch (error: any) {
     console.error('AI preview error:', error);
