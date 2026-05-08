@@ -14,6 +14,8 @@
   --text-secondary: #555566;
   --text-muted: #9090a0;
   --shadow: rgba(0, 0, 0, 0.08);
+
+  color-scheme: light;
 }
 
 [data-theme='dark'] {
@@ -25,4 +27,6 @@
   --text-secondary: #a0a8c0;
   --text-muted: #606880;
   --shadow: rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
 }

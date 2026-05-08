@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import type { Tag, Task, TaskStatus } from '../../types';
+import DatePickerInput from '../common/DatePicker';
 
 interface CreateTaskModalProps {
   sectionId: string;
@@ -115,12 +116,7 @@ export default function CreateTaskModal({
           {/* Tags */}
           <div className="create-task-field">
             <span className="create-task-field-label">{t('tasks.dueDate')}</span>
-            <input
-              className="create-task-date-input"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
+            <DatePickerInput value={dueDate} onChange={setDueDate} />
           </div>
 
           {/* Tags */}

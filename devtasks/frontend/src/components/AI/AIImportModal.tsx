@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import AIImportPreview from './AIImportPreview';
+import DatePickerInput from '../common/DatePicker';
 
 interface Props {
   projectId?: string;
@@ -199,12 +200,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
               </div>
               <div className="ai-meta-field">
                 <label className="ai-meta-label">{t('ai.startDate')}</label>
-                <input
-                  className="ai-meta-input"
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                />
+                <DatePickerInput value={startDate} onChange={setStartDate} />
               </div>
             </div>
 

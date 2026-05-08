@@ -148,6 +148,35 @@ body {
 }
 .btn-danger:hover { background: rgba(239,68,68,0.08); }
 
+/* ─── Elegant Date Inputs ───────────────────────────── */
+input[type="date"] {
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, color-mix(in srgb, var(--bg-tertiary) 96%, var(--accent)) 100%);
+  color: var(--text-primary);
+  font-size: 12px; font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.2s;
+}
+input[type="date"]:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+input[type="date"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+}
+input[type="date"]:hover::-webkit-calendar-picker-indicator { opacity: 1; }
+[data-theme='dark'] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.4);
+}
+input[type="date"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .btn-icon {
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; border-radius: 8px;
@@ -768,19 +797,6 @@ body {
 .create-task-field-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.07em; color: var(--text-muted);
-}
-.create-task-date-input {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-size: 13px;
-}
-.create-task-date-input:focus {
-  outline: none;
-  border-color: var(--accent);
 }
 .create-task-status-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .ct-status-pill {

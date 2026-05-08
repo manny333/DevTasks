@@ -530,6 +530,82 @@
 .settings-key-toggle:hover { color: var(--text-primary); }
 .btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
 
+/* ─── DatePicker (react-day-picker) ─────────────────── */
+.date-picker-wrap { position: relative; display: inline-flex; }
+.date-picker-trigger {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, color-mix(in srgb, var(--bg-tertiary) 96%, var(--accent)) 100%);
+  color: var(--text-muted); font-size: 11px; font-family: inherit;
+  cursor: pointer; white-space: nowrap;
+  transition: border-color 0.15s, box-shadow 0.15s, color 0.15s;
+}
+.date-picker-trigger:hover { border-color: var(--accent); }
+.date-picker-trigger.open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+.date-picker-trigger.has-value { color: var(--text-primary); }
+.date-picker-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
+.date-picker-icon { flex-shrink: 0; opacity: 0.5; }
+.date-picker-trigger.has-value .date-picker-icon { opacity: 0.8; }
+.date-picker-text { overflow: hidden; text-overflow: ellipsis; }
+.date-picker-clear {
+  flex-shrink: 0; opacity: 0; cursor: pointer; transition: opacity 0.15s;
+}
+.date-picker-trigger:hover .date-picker-clear { opacity: 0.5; }
+.date-picker-clear:hover { opacity: 1 !important; color: var(--danger); }
+
+.date-picker-popper {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 50;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: 0 12px 32px var(--shadow);
+  padding: 6px;
+  animation: dp-slide-in 0.12s ease;
+}
+@keyframes dp-slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Override react-day-picker CSS variables for Kanvy theme */
+.rdp-root {
+  --rdp-accent-color: var(--accent, #6366f1);
+  --rdp-accent-background-color: color-mix(in srgb, var(--accent, #6366f1) 12%, transparent);
+  --rdp-day-height: 34px;
+  --rdp-day-width: 34px;
+  --rdp-day_button-border-radius: 8px;
+  --rdp-font-family: inherit;
+  --rdp-day_button-margin: 1px;
+}
+.rdp-day_button {
+  font-size: 12px; transition: background 0.12s, color 0.12s;
+}
+.rdp-today .rdp-day_button {
+  font-weight: 700; border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent, #6366f1) 6%, transparent);
+}
+.rdp-selected .rdp-day_button {
+  font-weight: 700;
+}
+.rdp-month_caption {
+  font-size: 13px; font-weight: 600; padding: 4px 0;
+}
+.rdp-weekday {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  color: var(--text-muted); letter-spacing: 0.3px;
+}
+.rdp-nav_button {
+  width: 28px; height: 28px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--bg-secondary);
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s;
+}
+.rdp-nav_button:hover { background: var(--bg-tertiary); }
+.rdp-chevron { fill: var(--text-secondary); }
+.rdp-day:not(.rdp-selected) .rdp-day_button:hover {
+  background: color-mix(in srgb, var(--accent, #6366f1) 8%, transparent);
+}
+
 /* ─── Gantt Chart ──────────────────────────────────── */
 .gantt-board { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .gantt-toolbar {
@@ -1127,12 +1203,6 @@
   margin: 0 10px; flex-shrink: 0;
 }
 .task-modal-meta-text { white-space: nowrap; }
-.task-modal-meta-dim { opacity: 0.65; }
-
-/* Collapsible section */
-.task-modal-section-collapse {
-  display: flex; flex-direction: column; gap: 0;
-}
 .task-modal-section-collapse-header {
   display: flex; align-items: center; justify-content: space-between;
   cursor: pointer; user-select: none;
@@ -1160,15 +1230,8 @@
 }
 
 .task-modal-meta-due-input {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  padding: 2px 6px;
-  font-size: 11px;
   width: 115px;
 }
-.task-modal-meta-due-input:focus { outline: none; border-color: var(--accent); }
 
 .task-modal-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tag-add-btn {

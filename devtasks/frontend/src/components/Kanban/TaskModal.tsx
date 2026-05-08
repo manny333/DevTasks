@@ -9,6 +9,7 @@ import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, Project
 import AttachmentDropZone from './AttachmentDropZone';
 import MentionTextarea from './MentionTextarea';
 import ActivityTimeline from '../Activity/ActivityTimeline';
+import DatePickerInput from '../common/DatePicker';
 
 interface TaskModalProps {
   task: Task;
@@ -483,13 +484,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
             {editing ? (
-              <input
-                className="task-modal-meta-due-input"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                title={t('tasks.startDate')}
-              />
+              <DatePickerInput value={startDate} onChange={setStartDate} placeholder={t('tasks.startDate')} />
             ) : (
               <span className="task-modal-meta-text">{task.startDate ? new Date(task.startDate).toLocaleDateString() : t('tasks.startDate')}</span>
             )}
@@ -500,12 +495,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
             {editing ? (
-              <input
-                className="task-modal-meta-due-input"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
+              <DatePickerInput value={dueDate} onChange={setDueDate} />
             ) : (
               <span className="task-modal-meta-text">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : t('tasks.dueDate')}</span>
             )}
