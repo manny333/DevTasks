@@ -310,7 +310,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   };
 
   useEffect(() => {
-    if (!editing || !canEdit) return;
+    if (!canEdit) return;
     if (title === task.title && description === (task.description || '') && dueDate === (task.dueDate ? task.dueDate.slice(0, 10) : '') && startDate === (task.startDate ? task.startDate.slice(0, 10) : '')) return;
 
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
@@ -323,7 +323,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
       });
     }, 700);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, description, editing, canEdit, task.id]);
+  }, [title, description, dueDate, startDate, canEdit, task.id]);
 
   const save = async () => {
     setSaving(true);
@@ -483,10 +483,11 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            {editing ? (
-              <DatePickerInput value={startDate} onChange={setStartDate} placeholder={t('tasks.startDate')} />
+            <span className="task-modal-meta-label-inner">{t('tasks.startDate')}:</span>
+            {canEdit ? (
+              <DatePickerInput value={startDate} onChange={setStartDate} placeholder="—" />
             ) : (
-              <span className="task-modal-meta-text">{task.startDate ? new Date(task.startDate).toLocaleDateString() : t('tasks.startDate')}</span>
+              <span className="task-modal-meta-text">{task.startDate ? new Date(task.startDate).toLocaleDateString() : '—'}</span>
             )}
           </span>
           <span className="task-modal-meta-sep" />
@@ -494,10 +495,11 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
-            {editing ? (
-              <DatePickerInput value={dueDate} onChange={setDueDate} />
+            <span className="task-modal-meta-label-inner">{t('tasks.dueDate')}:</span>
+            {canEdit ? (
+              <DatePickerInput value={dueDate} onChange={setDueDate} placeholder="—" />
             ) : (
-              <span className="task-modal-meta-text">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : t('tasks.dueDate')}</span>
+              <span className="task-modal-meta-text">{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '—'}</span>
             )}
           </span>
           <span className="task-modal-meta-sep" />
