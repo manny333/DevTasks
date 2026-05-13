@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DndContext, PointerSensor, useSensor, useSensors, DragOverlay, closestCorners } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 import type { DragEndEvent, DragStartEvent, DragOverEvent } from '@dnd-kit/core';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
@@ -44,6 +45,7 @@ export default function Board({ section, projectTags, allSections, projectMember
   const [isMobileView, setIsMobileView] = useState(false);
   const [mobileStatusTab, setMobileStatusTab] = useState<TaskStatus>('TODO');
   const [filters, setFilters] = useState<TaskFilters>(DEFAULT_FILTERS);
+  const [sortBy, setSortBy] = useState<'recent' | 'oldest' | 'position'>('recent');
   const deleteTaskTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
@@ -91,8 +93,16 @@ export default function Board({ section, projectTags, allSections, projectMember
     setMobileStatusTab('TODO');
   }, [section.id]);
 
-  const tasksForColumn = (status: TaskStatus) =>
-    tasks.filter((t) => t.status === status && (!t.archived || showArchived));
+  const tasksForColumn = (status: TaskStatus) => {
+    const filtered = tasks.filter((t) => t.status === status && (!t.archived || showArchived));
+    if (sortBy === 'recent') {
+      return [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    if (sortBy === 'oldest') {
+      return [...filtered].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+    return [...filtered].sort((a, b) => a.position - b.position);
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = tasks.find((t) => t.id === event.active.id);
@@ -128,9 +138,35 @@ export default function Board({ section, projectTags, allSections, projectMember
     }
 
     const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.status === newStatus) return;
+    if (!task) return;
 
+    // Get sorted tasks in the target column
     const columnTasks = tasksForColumn(newStatus);
+
+    // Same column reorder: recalculate positions for the column
+    if (task.status === newStatus) {
+      const oldIndex = columnTasks.findIndex((t) => t.id === taskId);
+      const newIndex = columnTasks.findIndex((t) => t.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const reordered = arrayMove(columnTasks, oldIndex, newIndex);
+      const withPositions = reordered.map((t, i) => ({ ...t, position: i }));
+      setTasks((prev) =>
+        prev.map((t) => {
+          const updated = withPositions.find((u) => u.id === t.id);
+          return updated ?? t;
+        })
+      );
+      // Switch to manual order when user reorders manually
+      setSortBy('position');
+      try {
+        await api.patch(`/tasks/${taskId}/move`, { status: newStatus, position: withPositions.find((t) => t.id === taskId)!.position });
+      } catch {
+        fetchTasks();
+      }
+      return;
+    }
+
+    // Cross-column move: place at end of target column
     const newPosition = columnTasks.length;
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, position: newPosition } : t))
@@ -214,7 +250,7 @@ export default function Board({ section, projectTags, allSections, projectMember
   const undoDeleteTask = () => {
     if (!pendingDeleteTask) return;
     if (deleteTaskTimerRef.current) clearTimeout(deleteTaskTimerRef.current);
-    setTasks((prev) => [...prev, pendingDeleteTask].sort((a, b) => a.position - b.position));
+    setTasks((prev) => [...prev, pendingDeleteTask]);
     setPendingDeleteTask(null);
   };
 
@@ -242,6 +278,17 @@ export default function Board({ section, projectTags, allSections, projectMember
             />
             {t('tasks.showArchived')}
           </label>
+          <div className="sort-selector">
+            <span className="sort-selector-label">{t('tasks.sort.label')}:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'recent' | 'oldest' | 'position')}
+            >
+              <option value="recent">{t('tasks.sort.recent')}</option>
+              <option value="oldest">{t('tasks.sort.oldest')}</option>
+              <option value="position">{t('tasks.sort.position')}</option>
+            </select>
+          </div>
         </div>
 
         <FilterBar

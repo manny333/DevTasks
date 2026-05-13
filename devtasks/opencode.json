@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": {
+    "typescript": {},
+    "eslint": {},
+    "prisma": {}
+  },
+  "formatters": {
+    "*.ts": "npx prettier --write",
+    "*.tsx": "npx prettier --write",
+    "*.json": "npx prettier --write"
+  },
+  "commands": {
+    "migrate": "cd backend && npm run db:migrate",
+    "db:studio": "cd backend && npm run db:studio",
+    "db:seed": "cd backend && npm run db:seed",
+    "lint": "cd frontend && npm run lint",
+    "lint:be": "cd backend && npx tsc --noEmit",
+    "typecheck": "cd frontend && npx tsc -b"
+  }
+}

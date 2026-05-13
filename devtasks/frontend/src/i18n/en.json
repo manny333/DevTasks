@@ -87,6 +87,12 @@
     },
     "createAction": "Create Task",
     "assignMember": "Assign member",
+    "sort": {
+      "label": "Sort",
+      "recent": "Most recent first",
+      "oldest": "Oldest first",
+      "position": "Manual order"
+    },
     "autosave": {
       "saving": "Saving changes...",
       "saved": "Saved",

@@ -38,4 +38,48 @@ export class OpenAIProvider implements AIProvider {
       } : undefined,
     };
   }
+
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {
+    const res = await fetch(`${this.config.baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: options?.model || this.config.defaultModel,
+        messages,
+        temperature: options?.temperature ?? 0.3,
+        max_tokens: options?.maxTokens ?? 4096,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`OpenAI API error ${res.status}: ${err}`);
+    }
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const payload = line.slice(6).trim();
+        if (payload === '[DONE]') return;
+        try {
+          const json = JSON.parse(payload);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) yield delta;
+        } catch { /* skip malformed chunks */ }
+      }
+    }
+  }
 }

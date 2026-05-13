@@ -14,6 +14,6 @@
 - [x] Agregar traducciones en `i18n/en.json` y `i18n/es.json`
 
 ## Post-edición
-- [ ] Ejecutar migración Prisma (`npx prisma migrate dev`)
+- [x] Ejecutar migración Prisma (`npx prisma migrate dev`)
 - [x] Regenerar Prisma Client
-- [ ] Probar flujo completo end-to-end
+- [x] Probar flujo completo end-to-end

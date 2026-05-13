@@ -5,6 +5,8 @@ import api from '../../services/api';
 import AIImportPreview from './AIImportPreview';
 import DatePickerInput from '../common/DatePicker';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
 interface Props {
   projectId?: string;
   onClose: () => void;
@@ -39,6 +41,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<{ sections: PreviewSection[]; projectName?: string } | null>(null);
   const [generatedProjectName, setGeneratedProjectName] = useState('');
@@ -46,6 +49,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
   const [importResult, setImportResult] = useState<{ sections: number; tasks: number; tags: number; assignees: number } | null>(null);
   const [projectName, setProjectName] = useState('');
   const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     api.get('/ai/providers').then(res => {
@@ -66,24 +70,77 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
     if (!markdown.trim()) return;
     setError('');
     setGenerating(true);
+    setStreamingText('');
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const res = await api.post('/ai/preview', {
-        markdown: markdown.trim(),
-        projectId: projectId || undefined,
-        provider: selectedProvider,
-        projectName: projectName.trim() || undefined,
-        startDate: startDate || undefined,
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/ai/preview/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          markdown: markdown.trim(),
+          projectId: projectId || undefined,
+          provider: selectedProvider,
+          projectName: projectName.trim() || undefined,
+          startDate: startDate || undefined,
+        }),
+        signal: controller.signal,
       });
-      setPreview(res.data);
-      if (res.data.projectName && !projectName.trim()) {
-        setGeneratedProjectName(res.data.projectName);
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error((errData as any).error || `Server error ${response.status}`);
       }
-      setStep('preview');
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.done) {
+              setPreview(data.preview);
+              if (data.preview.projectName && !projectName.trim()) {
+                setGeneratedProjectName(data.preview.projectName);
+              }
+              setStep('preview');
+            } else if (data.token) {
+              setStreamingText((prev) => prev + data.token);
+            } else if (data.error) {
+              setError(data.error);
+            }
+          } catch { /* skip malformed SSE lines */ }
+        }
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || t('ai.errorGenerate'));
+      if (err.name === 'AbortError') return;
+      setError(err?.message || t('ai.errorGenerate'));
     } finally {
       setGenerating(false);
+      abortRef.current = null;
     }
+  };
+
+  const cancelGeneration = () => {
+    abortRef.current?.abort();
+    setGenerating(false);
+    setStreamingText('');
   };
 
   const applyImport = async () => {
@@ -232,14 +289,28 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
               )}
             </div>
 
+            {generating && (
+              <div className="ai-streaming-box">
+                <div className="ai-streaming-header">
+                  <span className="ai-spinner" />
+                  <span>{t('ai.generating')}</span>
+                </div>
+                <pre className="ai-streaming-content">{streamingText || ' '}</pre>
+              </div>
+            )}
+
             {error && <p className="ai-error">{error}</p>}
 
             <div className="ai-input-actions">
-              <button className="btn-primary" onClick={generate} disabled={!markdown.trim() || generating || !selectedHasKey}>
-                {generating ? (
-                  <><span className="ai-spinner" />{t('ai.generating')}</>
-                ) : t('ai.generate')}
-              </button>
+              {generating ? (
+                <button className="btn-secondary" onClick={cancelGeneration}>
+                  {t('common.cancel')}
+                </button>
+              ) : (
+                <button className="btn-primary" onClick={generate} disabled={!markdown.trim() || !selectedHasKey}>
+                  {t('ai.generate')}
+                </button>
+              )}
             </div>
           </div>
         ) : (

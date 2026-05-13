@@ -17,6 +17,7 @@ export interface ChatResponse {
 
 export interface AIProvider {
   chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse>;
+  chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined>;
 }
 
 export interface AIImportSubtask {

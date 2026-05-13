@@ -87,6 +87,12 @@
     },
     "createAction": "Crear Tarea",
     "assignMember": "Asignar miembro",
+    "sort": {
+      "label": "Ordenar",
+      "recent": "Más recientes primero",
+      "oldest": "Más antiguos primero",
+      "position": "Orden manual"
+    },
     "autosave": {
       "saving": "Guardando cambios...",
       "saved": "Guardado",

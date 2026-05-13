@@ -44,4 +44,9 @@ export class AnthropicProvider implements AIProvider {
       } : undefined,
     };
   }
+
+  async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {
+    const result = await this.chat(messages, options);
+    yield result.content;
+  }
 }
