@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember, Subtask } from '../../types';
+import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember, Subtask, TaskDependency } from '../../types';
 import AttachmentDropZone from './AttachmentDropZone';
 import MentionTextarea from './MentionTextarea';
 import ActivityTimeline from '../Activity/ActivityTimeline';
@@ -71,6 +71,14 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [blockedByDeps, setBlockedByDeps] = useState<TaskDependency[]>(task.blockedBy ?? []);
+  const [blocksDeps, setBlocksDeps] = useState<TaskDependency[]>(task.blocks ?? []);
+  const [depSearchQuery, setDepSearchQuery] = useState('');
+  const [depPickerOpen, setDepPickerOpen] = useState(false);
+  const [depsExpanded, setDepsExpanded] = useState(true);
+  const depPickerRef = useRef<HTMLDivElement>(null);
+  const depInputRef = useRef<HTMLInputElement>(null);
+
   const currentSection = (allSections || []).find((s) => s.id === task.sectionId);
 
   // Close section dropdown on outside click
@@ -122,6 +130,26 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   useEffect(() => {
     api.get(`/tasks/${task.id}/subtasks`).then((res) => setSubtasks(res.data)).catch(() => { /* ignore */ });
   }, [task.id]);
+
+  useEffect(() => {
+    api.get(`/tasks/${task.id}/dependencies`).then((res) => {
+      setBlockedByDeps(res.data.blockedBy);
+      setBlocksDeps(res.data.blocks);
+    }).catch(() => { /* ignore */ });
+  }, [task.id]);
+
+  useEffect(() => {
+    if (!depPickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (depPickerRef.current && !depPickerRef.current.contains(e.target as Node) &&
+          depInputRef.current && !depInputRef.current.contains(e.target as Node)) {
+        setDepPickerOpen(false);
+        setDepSearchQuery('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [depPickerOpen]);
 
   const syncSubtasksCount = (list: Subtask[]) => {
     const completed = list.filter((s) => s.completed).length;
@@ -187,6 +215,36 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     syncSubtasksCount(next);
     try {
       await api.delete(`/tasks/${task.id}/subtasks/${subtaskId}`);
+    } catch { /* ignore */ }
+  };
+
+  const allProjectTasks = (allSections || []).flatMap((s) => s.tasks || []).filter((t) => t.id !== task.id);
+  const blockedByIds = new Set(blockedByDeps.map((d) => d.dependsOnId));
+  const blocksIds = new Set(blocksDeps.map((d) => d.taskId));
+  const availableDepTasks = allProjectTasks.filter(
+    (t) => !blockedByIds.has(t.id) && !blocksIds.has(t.id)
+  );
+  const filteredDepTasks = depSearchQuery.trim()
+    ? availableDepTasks.filter((t) => t.title.toLowerCase().includes(depSearchQuery.toLowerCase()))
+    : availableDepTasks;
+
+  const addDependency = async (dependsOnId: string) => {
+    try {
+      const res = await api.post(`/tasks/${task.id}/dependencies`, { dependsOnId });
+      setBlockedByDeps((prev) => [...prev, res.data]);
+      setDepSearchQuery('');
+      setDepPickerOpen(false);
+    } catch (err: unknown) {
+      const axErr = err as { response?: { data?: { error?: string } } };
+      const msg = axErr?.response?.data?.error;
+      if (msg?.includes('circular')) alert(t('dependencies.circularError'));
+    }
+  };
+
+  const removeDependency = async (depId: string) => {
+    try {
+      await api.delete(`/tasks/${task.id}/dependencies/${depId}`);
+      setBlockedByDeps((prev) => prev.filter((d) => d.id !== depId));
     } catch { /* ignore */ }
   };
 
@@ -764,6 +822,94 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
                 disabled={!subtaskInput.trim() || subtaskAdding}
               >{t('subtasks.add')}</button>
             </form>
+          )}
+        </div>
+
+        {/* Dependencies */}
+        <div className="task-modal-section-collapse">
+          <div className="task-modal-section-collapse-header" onClick={() => setDepsExpanded(!depsExpanded)}>
+            <h3 className="task-modal-deps-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/>
+                <line x1="6" y1="9" x2="6" y2="21"/>
+              </svg>
+              {t('dependencies.title')}
+              {(blockedByDeps.length + blocksDeps.length) > 0 && (
+                <span className="attachment-count">{blockedByDeps.length + blocksDeps.length}</span>
+              )}
+            </h3>
+            <svg className={`task-modal-section-collapse-arrow${depsExpanded ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+          {depsExpanded && (
+            <div className="task-modal-section-collapse-body">
+              {blockedByDeps.length > 0 && (
+                <div className="task-deps-group">
+                  <span className="task-deps-group-label">{t('dependencies.blockedBy')}</span>
+                  <ul className="task-deps-list">
+                    {blockedByDeps.map((dep) => (
+                      <li key={dep.id} className="task-dep-item">
+                        <span className={`task-dep-status-dot task-dep-status-${dep.dependsOn?.status ?? 'TODO'}`} />
+                        <span className="task-dep-title">{dep.dependsOn?.title}</span>
+                        <span className="task-dep-status-label">{t(`tasks.status.${dep.dependsOn?.status ?? 'TODO'}`)}</span>
+                        {canEdit && (
+                          <button
+                            className="task-dep-remove"
+                            title={t('dependencies.remove')}
+                            onClick={() => removeDependency(dep.id)}
+                          >×</button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {blocksDeps.length > 0 && (
+                <div className="task-deps-group">
+                  <span className="task-deps-group-label">{t('dependencies.blocks')}</span>
+                  <ul className="task-deps-list">
+                    {blocksDeps.map((dep) => (
+                      <li key={dep.id} className="task-dep-item task-dep-item-blocks">
+                        <span className={`task-dep-status-dot task-dep-status-${dep.task?.status ?? 'TODO'}`} />
+                        <span className="task-dep-title">{dep.task?.title}</span>
+                        <span className="task-dep-status-label">{t(`tasks.status.${dep.task?.status ?? 'TODO'}`)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {blockedByDeps.length === 0 && blocksDeps.length === 0 && (
+                <p className="task-deps-empty">{t('dependencies.empty')}</p>
+              )}
+              {canEdit && (
+                <div className="task-dep-add-wrap">
+                  <input
+                    ref={depInputRef}
+                    type="text"
+                    className="task-dep-search-input"
+                    placeholder={t('dependencies.addPlaceholder')}
+                    value={depSearchQuery}
+                    onChange={(e) => { setDepSearchQuery(e.target.value); setDepPickerOpen(true); }}
+                    onFocus={() => setDepPickerOpen(true)}
+                  />
+                  {depPickerOpen && filteredDepTasks.length > 0 && (
+                    <div ref={depPickerRef} className="task-dep-picker-dropdown">
+                      {filteredDepTasks.slice(0, 10).map((t) => (
+                        <button
+                          key={t.id}
+                          className="task-dep-picker-item"
+                          onClick={() => addDependency(t.id)}
+                        >
+                          <span className={`task-dep-status-dot task-dep-status-${t.status}`} />
+                          <span className="task-dep-picker-title">{t.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           )}
         </div>
 

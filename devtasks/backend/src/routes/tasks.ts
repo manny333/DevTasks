@@ -8,6 +8,13 @@ import { logActivity } from '../lib/activity';
 const router = Router();
 router.use(authMiddleware);
 
+const STATUS_ORDER: Record<string, number> = {
+  TODO: 0,
+  IN_PROGRESS: 1,
+  IN_REVIEW: 2,
+  DONE: 3,
+};
+
 // PATCH /api/tasks/:id — update task
 router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -52,6 +59,8 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
         tags: { include: { tag: true } },
         assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
         subtasks: { orderBy: { position: 'asc' } },
+        blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
+        blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
         _count: { select: { comments: true, subtasks: true } },
       },
     });
@@ -77,11 +86,28 @@ router.patch('/:id/move', async (req: AuthRequest, res: Response): Promise<void>
       include: {
         assignees: { select: { userId: true } },
         section: { include: { project: { select: { id: true, name: true } } } },
+        blockedBy: { include: { dependsOn: { select: { status: true } } } },
       },
     });
     if (!task) {
       res.status(404).json({ error: 'Task not found' });
       return;
+    }
+
+    // Block status advance if task has unresolved dependencies
+    if (status !== task.status) {
+      const currentOrder = STATUS_ORDER[task.status] ?? 0;
+      const newOrder = STATUS_ORDER[status] ?? 0;
+      if (newOrder > currentOrder) {
+        const unresolved = task.blockedBy.some((d) => d.dependsOn.status !== 'DONE');
+        if (unresolved) {
+          res.status(409).json({
+            error: 'Task is blocked by unresolved dependencies',
+            code: 'TASK_BLOCKED',
+          });
+          return;
+        }
+      }
     }
 
     // Shift positions of other tasks in the target column
@@ -101,6 +127,8 @@ router.patch('/:id/move', async (req: AuthRequest, res: Response): Promise<void>
       include: {
         tags: { include: { tag: true } },
         subtasks: { orderBy: { position: 'asc' } },
+        blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
+        blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
         _count: { select: { comments: true, subtasks: true } },
       },
     });
@@ -173,6 +201,8 @@ router.patch('/:id/move-section', async (req: AuthRequest, res: Response): Promi
       include: {
         tags: { include: { tag: true } },
         subtasks: { orderBy: { position: 'asc' } },
+        blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
+        blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
         _count: { select: { comments: true, subtasks: true } },
       },
     });
@@ -563,6 +593,155 @@ router.delete('/:id/assignees/:userId', async (req: AuthRequest, res: Response):
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// ─── Dependencies ──────────────────────────────────────
+
+// GET /api/tasks/:id/dependencies — list task dependencies
+router.get('/:id/dependencies', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res, false)) return;
+    const [blockedBy, blocks] = await Promise.all([
+      prisma.taskDependency.findMany({
+        where: { taskId: req.params.id as string },
+        include: { dependsOn: { select: { id: true, title: true, status: true } } },
+      }),
+      prisma.taskDependency.findMany({
+        where: { dependsOnId: req.params.id as string },
+        include: { task: { select: { id: true, title: true, status: true } } },
+      }),
+    ]);
+    res.json({ blockedBy, blocks });
+  } catch (error) {
+    console.error('List dependencies error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/tasks/:id/dependencies — add dependency (this task is blocked by dependsOnId)
+router.post('/:id/dependencies', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+    const { dependsOnId } = req.body;
+    if (!dependsOnId) {
+      res.status(400).json({ error: 'dependsOnId is required' });
+      return;
+    }
+    const taskId = req.params.id as string;
+    if (taskId === dependsOnId) {
+      res.status(400).json({ error: 'A task cannot depend on itself' });
+      return;
+    }
+
+    const dependsOnTask = await prisma.task.findUnique({ where: { id: dependsOnId } });
+    if (!dependsOnTask) {
+      res.status(404).json({ error: 'Dependency task not found' });
+      return;
+    }
+
+    const existing = await prisma.taskDependency.findUnique({
+      where: { taskId_dependsOnId: { taskId, dependsOnId } },
+    });
+    if (existing) {
+      res.status(409).json({ error: 'Dependency already exists' });
+      return;
+    }
+
+    const hasCycle = await detectCycle(taskId, dependsOnId);
+    if (hasCycle) {
+      res.status(400).json({ error: 'Adding this dependency would create a circular reference' });
+      return;
+    }
+
+    const dep = await prisma.taskDependency.create({
+      data: { taskId, dependsOnId },
+      include: { dependsOn: { select: { id: true, title: true, status: true } } },
+    });
+
+    const taskMeta = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { title: true, section: { select: { id: true, name: true, project: { select: { id: true } } } } },
+    });
+    const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+    if (taskMeta) {
+      logActivity({
+        action: 'DEPENDENCY_ADDED',
+        taskId,
+        taskTitle: taskMeta.title,
+        projectId: taskMeta.section.project.id,
+        sectionId: taskMeta.section.id,
+        sectionName: taskMeta.section.name,
+        actorId: req.userId!,
+        actorName: actor?.name ?? 'Someone',
+        details: { dependsOnId, dependsOnTitle: dependsOnTask.title },
+      });
+    }
+
+    res.status(201).json(dep);
+  } catch (error) {
+    console.error('Add dependency error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/tasks/:id/dependencies/:depId — remove dependency
+router.delete('/:id/dependencies/:depId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+    const dep = await prisma.taskDependency.findUnique({
+      where: { id: req.params.depId as string },
+      include: { dependsOn: { select: { id: true, title: true } } },
+    });
+    if (!dep || dep.taskId !== req.params.id) {
+      res.status(404).json({ error: 'Dependency not found' });
+      return;
+    }
+
+    await prisma.taskDependency.delete({ where: { id: req.params.depId as string } });
+
+    const taskMeta = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      select: { title: true, section: { select: { id: true, name: true, project: { select: { id: true } } } } },
+    });
+    const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
+    if (taskMeta) {
+      logActivity({
+        action: 'DEPENDENCY_REMOVED',
+        taskId: req.params.id as string,
+        taskTitle: taskMeta.title,
+        projectId: taskMeta.section.project.id,
+        sectionId: taskMeta.section.id,
+        sectionName: taskMeta.section.name,
+        actorId: req.userId!,
+        actorName: actor?.name ?? 'Someone',
+        details: { dependsOnId: dep.dependsOnId, dependsOnTitle: dep.dependsOn.title },
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Remove dependency error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+async function detectCycle(taskId: string, dependsOnId: string): Promise<boolean> {
+  const visited = new Set<string>();
+  const queue = [dependsOnId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    const deps = await prisma.taskDependency.findMany({
+      where: { taskId: current },
+      select: { dependsOnId: true },
+    });
+    for (const d of deps) {
+      if (d.dependsOnId === taskId) return true;
+      if (!visited.has(d.dependsOnId)) queue.push(d.dependsOnId);
+    }
+  }
+  return false;
+}
 
 // ─── Activity ───────────────────────────────────────────
 

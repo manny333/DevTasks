@@ -42,6 +42,21 @@ export interface Subtask {
   updatedAt: string;
 }
 
+export interface TaskDependencyRef {
+  id: string;
+  title: string;
+  status: TaskStatus;
+}
+
+export interface TaskDependency {
+  id: string;
+  taskId: string;
+  dependsOnId: string;
+  createdAt: string;
+  dependsOn?: TaskDependencyRef;
+  task?: TaskDependencyRef;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -57,6 +72,8 @@ export interface Task {
   tags: TaskTag[];
   assignees?: TaskAssignee[];
   subtasks?: Subtask[];
+  blockedBy?: TaskDependency[];
+  blocks?: TaskDependency[];
   _count: { comments: number; subtasks?: number };
 }
 
@@ -202,7 +219,9 @@ export type ActivityAction =
   | 'TAG_ADDED'
   | 'TAG_REMOVED'
   | 'ATTACHMENT_UPLOADED'
-  | 'ATTACHMENT_DELETED';
+  | 'ATTACHMENT_DELETED'
+  | 'DEPENDENCY_ADDED'
+  | 'DEPENDENCY_REMOVED';
 
 export interface ActivityLog {
   id: string;

@@ -260,6 +260,19 @@
     "hoursPerDay": "Hours per day",
     "workDays": "Working days"
   },
+  "dependencies": {
+    "title": "Dependencies",
+    "blockedBy": "Blocked by",
+    "blocks": "Blocks",
+    "addPlaceholder": "Search task to add dependency…",
+    "add": "Add",
+    "remove": "Remove dependency",
+    "empty": "No dependencies",
+    "circularError": "Cannot add: would create a circular dependency",
+    "alreadyExists": "Dependency already exists",
+    "selfError": "A task cannot depend on itself",
+    "cannotAdvance": "This task is blocked by unresolved dependencies. Complete them before advancing."
+  },
   "activity": {
     "title": "Activity",
     "empty": "No activity recorded for this task yet.",
@@ -289,7 +302,9 @@
       "TAG_ADDED": "added tag {{tag}}",
       "TAG_REMOVED": "removed tag {{tag}}",
       "ATTACHMENT_UPLOADED": "uploaded an attachment",
-      "ATTACHMENT_DELETED": "deleted an attachment"
+      "ATTACHMENT_DELETED": "deleted an attachment",
+      "DEPENDENCY_ADDED": "added dependency on \"{{task}}\"",
+      "DEPENDENCY_REMOVED": "removed dependency on \"{{task}}\""
     }
   },
   "filters": {

@@ -991,6 +991,7 @@
 .task-card:hover { border-color: var(--accent); box-shadow: 0 3px 12px var(--shadow); }
 .task-card.is-dragging { opacity: 0.85; box-shadow: 0 8px 24px var(--shadow); }
 .task-card.archived { opacity: 0.5; }
+.task-card.is-blocked { border-left: 3px solid var(--danger, #ef4444); cursor: default; }
 .task-card-ghost {
   border: 2px dashed var(--accent);
   border-radius: 10px;
@@ -1012,6 +1013,15 @@
 }
 .task-card:hover .task-advance-btn { opacity: 1; }
 .task-advance-btn:hover { background: #22c55e; border-color: #22c55e; color: #fff; opacity: 1; }
+.task-advance-btn:disabled,
+.task-advance-btn.task-advance-btn-blocked {
+  opacity: 0.3; cursor: not-allowed; background: transparent;
+  border-color: var(--danger, #ef4444); color: var(--danger, #ef4444);
+}
+.task-advance-btn:disabled:hover,
+.task-advance-btn.task-advance-btn-blocked:hover {
+  background: transparent; border-color: var(--danger, #ef4444); color: var(--danger, #ef4444);
+}
 
 /* ─── Card menu (⋮ move to section) ─────────────────── */
 .task-card-menu { position: relative; flex-shrink: 0; }
@@ -1912,6 +1922,87 @@ a.attachment-name:hover { color: var(--accent); }
 .task-card-subtasks-progress-fill {
   height: 100%; background: linear-gradient(90deg, #22c55e, #16a34a);
   border-radius: 2px; transition: width 0.35s ease;
+}
+
+/* ─── Dependencies ──────────────────────────────────────── */
+.task-deps-group { margin-bottom: 8px; }
+.task-deps-group-label {
+  font-size: 11px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  display: block; margin-bottom: 4px;
+}
+.task-deps-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.task-dep-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 6px;
+  font-size: 13px; color: var(--text-primary);
+  transition: background 0.12s;
+}
+.task-dep-item:hover { background: var(--bg-tertiary); }
+.task-dep-item-blocks { opacity: 0.7; }
+.task-dep-status-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.task-dep-status-dot.task-dep-status-TODO { background: var(--text-muted); }
+.task-dep-status-dot.task-dep-status-IN_PROGRESS { background: #3b82f6; }
+.task-dep-status-dot.task-dep-status-IN_REVIEW { background: #f59e0b; }
+.task-dep-status-dot.task-dep-status-DONE { background: #22c55e; }
+.task-dep-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-dep-status-label {
+  font-size: 10.5px; font-weight: 500; color: var(--text-muted);
+  flex-shrink: 0;
+}
+.task-dep-remove {
+  width: 20px; height: 20px; border: none; border-radius: 4px;
+  background: transparent; color: var(--text-muted);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+.task-dep-item:hover .task-dep-remove { opacity: 1; }
+.task-dep-remove:hover { background: var(--bg-secondary); color: var(--danger, #ef4444); }
+.task-deps-empty {
+  font-size: 12.5px; color: var(--text-muted); margin: 0; padding: 4px 0;
+}
+.task-dep-add-wrap { position: relative; margin-top: 6px; }
+.task-dep-search-input {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--bg-primary);
+  color: var(--text-primary); font-size: 12.5px;
+  transition: border-color 0.12s;
+}
+.task-dep-search-input::placeholder { color: var(--text-muted); }
+.task-dep-search-input:focus { border-color: var(--accent); outline: none; }
+.task-dep-picker-dropdown {
+  position: absolute; top: 100%; left: 0; right: 0;
+  max-height: 200px; overflow-y: auto;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 8px; margin-top: 4px; z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.task-dep-picker-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 10px; border: none;
+  background: transparent; color: var(--text-primary);
+  font-size: 12.5px; cursor: pointer; text-align: left;
+  transition: background 0.12s;
+}
+.task-dep-picker-item:hover { background: var(--bg-tertiary); }
+.task-dep-picker-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ─── Blocked/Blocks indicator on TaskCard ───────────── */
+.task-card-blocked, .task-card-blocks {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600; padding: 1px 5px;
+  border-radius: 4px; flex-shrink: 0;
+}
+.task-card-blocked {
+  color: var(--danger, #ef4444);
+  background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
+}
+.task-card-blocks {
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
 }
 
 /* ─── Activity Timeline ───────────────────────────────── */

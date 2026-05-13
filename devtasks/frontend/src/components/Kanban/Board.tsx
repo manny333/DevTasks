@@ -174,7 +174,12 @@ export default function Board({ section, projectTags, allSections, projectMember
 
     try {
       await api.patch(`/tasks/${taskId}/move`, { status: newStatus, position: newPosition });
-    } catch {
+      fetchTasks();
+    } catch (err: unknown) {
+      const axErr = err as { response?: { data?: { code?: string } } };
+      if (axErr?.response?.data?.code === 'TASK_BLOCKED') {
+        alert(t('dependencies.cannotAdvance'));
+      }
       fetchTasks();
     }
   };
@@ -198,7 +203,12 @@ export default function Board({ section, projectTags, allSections, projectMember
     );
     try {
       await api.patch(`/tasks/${task.id}/move`, { status: newStatus, position: newPosition });
-    } catch {
+      fetchTasks();
+    } catch (err: unknown) {
+      const axErr = err as { response?: { data?: { code?: string } } };
+      if (axErr?.response?.data?.code === 'TASK_BLOCKED') {
+        alert(t('dependencies.cannotAdvance'));
+      }
       fetchTasks();
     }
   };

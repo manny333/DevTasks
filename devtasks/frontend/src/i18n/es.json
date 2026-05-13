@@ -241,6 +241,19 @@
     "hoursPerDay": "Horas por día",
     "workDays": "Días laborales"
   },
+  "dependencies": {
+    "title": "Dependencias",
+    "blockedBy": "Bloqueada por",
+    "blocks": "Bloquea a",
+    "addPlaceholder": "Buscar tarea para agregar dependencia…",
+    "add": "Agregar",
+    "remove": "Eliminar dependencia",
+    "empty": "Sin dependencias",
+    "circularError": "No se puede agregar: crearía una dependencia circular",
+    "alreadyExists": "La dependencia ya existe",
+    "selfError": "Una tarea no puede depender de sí misma",
+    "cannotAdvance": "Esta tarea está bloqueada por dependencias sin resolver. Complétalas antes de avanzar."
+  },
   "activity": {
     "title": "Actividad",
     "empty": "Aún no hay actividad registrada para esta tarea.",
@@ -270,7 +283,9 @@
       "TAG_ADDED": "agregó etiqueta {{tag}}",
       "TAG_REMOVED": "quitó etiqueta {{tag}}",
       "ATTACHMENT_UPLOADED": "subió un archivo",
-      "ATTACHMENT_DELETED": "eliminó un archivo"
+      "ATTACHMENT_DELETED": "eliminó un archivo",
+      "DEPENDENCY_ADDED": "agregó dependencia de \"{{task}}\"",
+      "DEPENDENCY_REMOVED": "eliminó dependencia de \"{{task}}\""
     }
   },
   "filters": {

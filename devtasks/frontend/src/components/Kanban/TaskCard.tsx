@@ -29,8 +29,9 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const isBlocked = (task.blockedBy ?? []).some((d) => d.dependsOn?.status !== 'DONE');
   const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortDragging } =
-    useSortable({ id: task.id });
+    useSortable({ id: task.id, disabled: isBlocked || !canEdit });
 
   const otherSections = (allSections || []).filter((s) => s.id !== task.sectionId);
   const showMenu = canEdit && (otherSections.length > 0 || !!onArchive);
@@ -69,6 +70,9 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
     opacity: isSortDragging ? 0.4 : 1,
   };
 
+  const blocksCount = (task.blocks ?? []).length;
+  const canAdvance = onAdvance && !isBlocked && task.status !== 'DONE';
+
   const dueInfo = (() => {
     if (!task.dueDate) return null;
     const due = new Date(task.dueDate);
@@ -91,15 +95,16 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
       style={style}
       {...attributes}
       {...listeners}
-      className={`task-card ${isDragging ? 'is-dragging' : ''} ${task.archived ? 'archived' : ''}`}
+      className={`task-card ${isDragging ? 'is-dragging' : ''} ${task.archived ? 'archived' : ''} ${isBlocked && canEdit ? 'is-blocked' : ''}`}
       onClick={onClick}
     >
       <div className="task-card-top">
         {onAdvance && (
           <button
-            className="task-advance-btn"
-            title={t('tasks.advance')}
-            onClick={(e) => { e.stopPropagation(); onAdvance(); }}
+            className={`task-advance-btn${isBlocked ? ' task-advance-btn-blocked' : ''}`}
+            title={isBlocked ? t('dependencies.cannotAdvance') : t('tasks.advance')}
+            disabled={isBlocked}
+            onClick={(e) => { e.stopPropagation(); if (canAdvance) onAdvance(); }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
@@ -208,6 +213,21 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
       })()}
 
       <div className="task-card-footer">
+        {isBlocked && (
+          <span className="task-card-blocked" title={t('dependencies.blockedBy')}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </span>
+        )}
+        {!isBlocked && blocksCount > 0 && (
+          <span className="task-card-blocks" title={t('dependencies.blocks')}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/>
+              <line x1="6" y1="9" x2="6" y2="21"/>
+            </svg>
+          </span>
+        )}
         {dueInfo && (
           <span className={`task-card-due task-card-due-${dueInfo.tone}`} title={task.dueDate ? new Date(task.dueDate).toLocaleDateString() : ''}>
             {dueInfo.label}

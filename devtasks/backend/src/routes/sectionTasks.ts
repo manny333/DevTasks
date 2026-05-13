@@ -58,6 +58,8 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
       include: {
         tags: { include: { tag: true } },
         subtasks: { orderBy: { position: 'asc' } },
+        blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
+        blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
         _count: { select: { comments: true, subtasks: true } },
       },
     });
@@ -129,6 +131,8 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
         tags: { include: { tag: true } },
         assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },
         subtasks: { orderBy: { position: 'asc' } },
+        blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
+        blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
         _count: { select: { comments: true, subtasks: true } },
       },
       orderBy: { position: 'asc' },

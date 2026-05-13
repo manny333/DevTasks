@@ -68,6 +68,10 @@ export default function ActivityTimeline({ taskId }: ActivityTimelineProps) {
         return t('activity.action.TAG_REMOVED', { tag: details?.tagName ?? '' });
       case 'ATTACHMENT_UPLOADED': return t('activity.action.ATTACHMENT_UPLOADED');
       case 'ATTACHMENT_DELETED': return t('activity.action.ATTACHMENT_DELETED');
+      case 'DEPENDENCY_ADDED':
+        return t('activity.action.DEPENDENCY_ADDED', { task: details?.dependsOnTitle ?? '' });
+      case 'DEPENDENCY_REMOVED':
+        return t('activity.action.DEPENDENCY_REMOVED', { task: details?.dependsOnTitle ?? '' });
       default: return a.action;
     }
   };

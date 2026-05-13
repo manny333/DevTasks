@@ -60,6 +60,8 @@ enum ActivityAction {
   TAG_REMOVED
   ATTACHMENT_UPLOADED
   ATTACHMENT_DELETED
+  DEPENDENCY_ADDED
+  DEPENDENCY_REMOVED
 }
 
 // ─── Models ──────────────────────────────────────────────
@@ -165,6 +167,8 @@ model Task {
   attachments TaskAttachment[]
   subtasks    Subtask[]
   activities  ActivityLog[]     @relation("TaskActivities")
+  blockedBy   TaskDependency[]  @relation("TaskBlockedBy")
+  blocks      TaskDependency[]  @relation("TaskBlocks")
 }
 
 model Subtask {
@@ -177,6 +181,21 @@ model Subtask {
 
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskDependency {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  taskId      String
+  task        Task   @relation("TaskBlockedBy", fields: [taskId], references: [id], onDelete: Cascade)
+
+  dependsOnId String
+  dependsOn   Task   @relation("TaskBlocks", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnId])
+  @@index([taskId])
+  @@index([dependsOnId])
 }
 
 model TaskAttachment {
