@@ -395,6 +395,31 @@ input[type="date"]:disabled { opacity: 0.5; cursor: not-allowed; }
   padding: 4px 10px; border-radius: 20px;
 }
 
+/* ─── World Cup 2026 Badge ──────────────────────────── */
+.wc-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,165,0,0.08));
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 20px;
+  padding: 5px 12px;
+  color: rgba(255,255,255,0.9);
+  font-size: 11px;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  position: relative; z-index: 2;
+}
+.wc-badge-icon { width: 14px; height: 14px; flex-shrink: 0; color: #FFD700; }
+.wc-badge-label { font-weight: 600; }
+.wc-badge-sep { opacity: 0.4; }
+.wc-badge-count { opacity: 0.75; }
+.wc-badge-hosts { opacity: 0.5; font-size: 10px; }
+
+.hero-actions-row {
+  display: flex; gap: 8px; margin-top: 16px;
+}
+
 .projects-page-header {
   display: flex; align-items: flex-start; justify-content: space-between;
   margin-bottom: 36px; gap: 16px;
@@ -966,8 +991,17 @@ input[type="date"]:disabled { opacity: 0.5; cursor: not-allowed; }
 /* ─── Responsive Layout ─────────────────────────────── */
 @media (max-width: 1024px) {
   .projects-page {
-    padding: 28px 24px 44px;
-    max-width: 100%;
+    padding: 0 24px 44px;
+  }
+  .projects-hero {
+    margin: 0 -24px;
+    border-radius: 0;
+  }
+  .projects-hero-content {
+    padding: 28px 24px 60px;
+  }
+  .projects-stats-row {
+    padding: 0 24px;
   }
 
   .projects-grid {
@@ -999,27 +1033,32 @@ input[type="date"]:disabled { opacity: 0.5; cursor: not-allowed; }
   .navbar-user > span { display: none; }
 
   .projects-page {
-    padding: 20px 14px 36px;
+    padding: 0 14px 36px;
   }
-
-  .projects-page-header {
+  .projects-hero {
+    margin: 0 -14px;
+    padding: 24px 20px 54px;
+    border-radius: 0;
+  }
+  .projects-hero-content {
     flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    margin-bottom: 20px;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .projects-hero-avatar { display: none; }
+  .projects-hero-stats { margin-top: 10px; }
+  .hero-actions-row { margin-top: 14px; }
+  .hero-actions-row .btn-hero-create { width: 100%; }
+  .hero-actions-row { flex-direction: column; }
+
+  .projects-stats-row {
+    padding: 0 14px;
+    flex-direction: column;
+    gap: 10px;
   }
 
   .projects-page-title { font-size: 22px; }
   .projects-page-subtitle { font-size: 12px; margin-top: 2px; }
-
-  .projects-page-header .btn-primary,
-  .projects-page-header .btn-ai,
-  .projects-page-actions .btn-primary,
-  .projects-page-actions .btn-ai {
-    width: 100%;
-    height: 40px; justify-content: center;
-  }
-  .projects-page-actions { flex-direction: column; }
 
   .projects-grid {
     grid-template-columns: 1fr;

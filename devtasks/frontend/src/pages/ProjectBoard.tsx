@@ -12,6 +12,7 @@ import AIImportModal from '../components/AI/AIImportModal';
 import ManageTagsModal from '../components/Tags/ManageTagsModal';
 import ManageMembersModal from '../components/Members/ManageMembersModal';
 import UndoToast from '../components/UndoToast';
+import balonImg from '../assets/balon_fifa_2026.png';
 
 const SECTION_COLORS = [
   '#6366f1', '#f59e0b', '#22c55e', '#ec4899',
@@ -35,6 +36,76 @@ export default function ProjectBoard() {
   const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showAIImport, setShowAIImport] = useState(false);
+
+  const ballAnimRef = useRef(0);
+  const ballElsRef = useRef<Map<number, HTMLImageElement>>(new Map());
+  const ballPhysicsRef = useRef<{ id: number; x: number; y: number; vx: number; vy: number; life: number }[]>([]);
+
+  const spawnBall = (clientX: number, clientY: number, vx?: number, vy?: number) => {
+    const id = Date.now() + Math.random();
+    const img = document.createElement('img');
+    img.src = balonImg;
+    img.style.cssText = `position:fixed;width:40px;height:40px;pointer-events:none;z-index:9999;left:${clientX - 20}px;top:${clientY - 20}px;transform:translateZ(0);will-change:transform;`;
+    document.body.appendChild(img);
+    ballElsRef.current.set(id, img);
+    ballPhysicsRef.current.push({ id, x: clientX - 20, y: clientY - 20, vx: vx ?? (Math.random() - 0.5) * 14, vy: vy ?? (-12 - Math.random() * 4), life: 1 });
+    if (!ballAnimRef.current) ballAnimRef.current = requestAnimationFrame(tickBalls);
+  };
+
+  const tickBalls = () => {
+    const GRAVITY = 0.5;
+    const BOUNCE = 0.65;
+    const SIZE = 40;
+    for (const b of ballPhysicsRef.current) {
+      b.vy += GRAVITY; b.x += b.vx; b.y += b.vy; b.life -= 0.004;
+      const right = window.innerWidth - SIZE;
+      const bottom = window.innerHeight - SIZE;
+      if (b.x < 0) { b.x = 0; b.vx = Math.abs(b.vx) * BOUNCE; }
+      if (b.x > right) { b.x = right; b.vx = -Math.abs(b.vx) * BOUNCE; }
+      if (b.y > bottom) { b.y = bottom; b.vy = -Math.abs(b.vy) * BOUNCE; }
+      const el = ballElsRef.current.get(b.id);
+      if (el) { el.style.left = `${b.x}px`; el.style.top = `${b.y}px`; el.style.opacity = String(Math.max(0, b.life)); }
+    }
+    const keep: typeof ballPhysicsRef.current = [];
+    const dead: number[] = [];
+    for (const b of ballPhysicsRef.current) {
+      if (b.life <= 0 || b.y > window.innerHeight + 100) dead.push(b.id);
+      else keep.push(b);
+    }
+    for (const id of dead) { ballElsRef.current.get(id)?.remove(); ballElsRef.current.delete(id); }
+    ballPhysicsRef.current = keep;
+    if (ballPhysicsRef.current.length > 0) ballAnimRef.current = requestAnimationFrame(tickBalls);
+    else ballAnimRef.current = 0;
+  };
+
+  const handleBallsClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.modal-overlay, button, a, input, textarea, .task-card, .sections-sidebar, .board-column-header, .board-column')) return;
+    spawnBall(e.clientX, e.clientY);
+  };
+
+  useEffect(() => () => {
+    cancelAnimationFrame(ballAnimRef.current);
+    for (const el of ballElsRef.current.values()) el.remove();
+    ballElsRef.current.clear();
+    ballPhysicsRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const timer = setTimeout(() => {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 3;
+      const count = 20;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.8;
+        const speed = 8 + Math.random() * 8;
+        spawnBall(cx + (Math.random() - 0.5) * 40, cy + (Math.random() - 0.5) * 40, Math.cos(angle) * speed, Math.sin(angle) * speed);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   useEffect(() => {
     if (!slug) return;
     api
@@ -135,7 +206,7 @@ export default function ProjectBoard() {
   const canEdit = !project.myAccess || project.myAccess.level === 'owner' || project.myAccess.accessType !== 'VIEWER';
 
   return (
-    <div className="project-board-layout">
+    <div className="project-board-layout" onClick={handleBallsClick}>
       {/* Sidebar */}
       <aside className="sections-sidebar">
         <div className="sidebar-header">

@@ -1,21 +1,40 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "lsp": {
-    "typescript": {},
-    "eslint": {},
-    "prisma": {}
+  "model": "deepseek/deepseek-v4-pro",
+  "lsp": true,
+  "formatter": {
+    "prettier": {
+      "extensions": [".ts", ".tsx", ".json", ".css", ".md"]
+    }
   },
-  "formatters": {
-    "*.ts": "npx prettier --write",
-    "*.tsx": "npx prettier --write",
-    "*.json": "npx prettier --write"
-  },
-  "commands": {
-    "migrate": "cd backend && npm run db:migrate",
-    "db:studio": "cd backend && npm run db:studio",
-    "db:seed": "cd backend && npm run db:seed",
-    "lint": "cd frontend && npm run lint",
-    "lint:be": "cd backend && npx tsc --noEmit",
-    "typecheck": "cd frontend && npx tsc -b"
+  "command": {
+    "migrate": {
+      "template": "Ejecuta las migraciones de Prisma pendientes con `cd backend && npm run db:migrate`",
+      "description": "Ejecutar migraciones de BD"
+    },
+    "db:studio": {
+      "template": "Abre Prisma Studio con `cd backend && npm run db:studio`",
+      "description": "Abrir Prisma Studio"
+    },
+    "db:seed": {
+      "template": "Siembra datos de prueba con `cd backend && npm run db:seed`",
+      "description": "Sembrar datos de prueba"
+    },
+    "lint": {
+      "template": "Ejecuta ESLint en el frontend con `cd frontend && npm run lint` y muestra los errores",
+      "description": "Lint del frontend"
+    },
+    "lint:be": {
+      "template": "Verifica tipos del backend con `cd backend && npx tsc --noEmit`",
+      "description": "Typecheck del backend"
+    },
+    "typecheck": {
+      "template": "Verifica tipos del frontend con `cd frontend && npx tsc -b`",
+      "description": "Typecheck del frontend"
+    },
+    "dev": {
+      "template": "Inicia ambos servidores de desarrollo: backend y frontend",
+      "description": "Iniciar servidores dev"
+    }
   }
 }
