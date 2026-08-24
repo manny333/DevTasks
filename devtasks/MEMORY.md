@@ -12,6 +12,7 @@
 | **Calendar View** | Vista mensual/semanal con navegación, tasks como badges por día, zoom |
 | **List View** | Tabla ordenable por título, sección, status, fecha. Tags, assignees, progreso |
 | **Gantt Chart** | Timeline con barras por sección, 3 modos (Normal/Fases/Secuencial), zoom día/semana/mes, pan con drag del mouse |
+| **Reordenar secciones** | Drag & drop de secciones en el sidebar con @dnd-kit, persistido vía `PUT /projects/:id/sections/reorder` |
 
 ---
 

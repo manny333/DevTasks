@@ -13,6 +13,10 @@ import ManageTagsModal from '../components/Tags/ManageTagsModal';
 import ManageMembersModal from '../components/Members/ManageMembersModal';
 import UndoToast from '../components/UndoToast';
 import balonImg from '../assets/balon_fifa_2026.png';
+import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const SECTION_COLORS = [
   '#6366f1', '#f59e0b', '#22c55e', '#ec4899',
@@ -36,6 +40,10 @@ export default function ProjectBoard() {
   const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showAIImport, setShowAIImport] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   const ballAnimRef = useRef(0);
   const ballElsRef = useRef<Map<number, HTMLImageElement>>(new Map());
@@ -205,6 +213,26 @@ export default function ProjectBoard() {
 
   const canEdit = !project.myAccess || project.myAccess.level === 'owner' || project.myAccess.accessType !== 'VIEWER';
 
+  const displayedSections = (project.sections || []).filter(sec => showArchivedSections ? true : !sec.archived);
+
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !project) return;
+    const full = project.sections || [];
+    const displayed = full.filter(s => showArchivedSections ? true : !s.archived);
+    const oldIndex = displayed.findIndex(s => s.id === active.id);
+    const newIndex = displayed.findIndex(s => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(displayed, oldIndex, newIndex);
+    let di = 0;
+    const newFull = full.map(s => {
+      if (!showArchivedSections && s.archived) return s;
+      return reordered[di++];
+    });
+    setProject(prev => prev ? { ...prev, sections: newFull } : prev);
+    api.put(`/projects/${project.id}/sections/reorder`, { order: newFull.map(s => s.id) }).catch(() => { /* ignore */ });
+  };
+
   return (
     <div className="project-board-layout" onClick={handleBallsClick}>
       {/* Sidebar */}
@@ -214,65 +242,23 @@ export default function ProjectBoard() {
         </div>
         <nav className="sections-nav">
           <div className="sections-nav-title">{t('sections.title')}</div>
-          {(project.sections || []).filter(sec => showArchivedSections ? true : !sec.archived).map((sec) => {
-            const stats = sectionTaskStats[sec.id] ?? { done: 0, total: 0 };
-            const pct = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
-            return (
-              <div
-                key={sec.id}
-                className={`section-nav-item ${activeSection?.id === sec.id ? 'active' : ''} ${sec.archived ? 'archived' : ''}`}
-                style={{ '--sec-color': sec.color } as React.CSSProperties}
-              >
-                <button
-                  className="section-nav-btn"
-                  onClick={() => setActiveSection(sec)}
-                >
-                  <span className="section-nav-dot" style={{ background: sec.color }} />
-                  {sec.name}
-                </button>
-                {canEdit && (
-                  <button
-                    className="section-nav-share"
-                    onClick={() => { setMembersSectionTarget(sec); setShowManageMembers(true); }}
-                    title={t('members.shareSection')}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                    </svg>
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    className="section-nav-archive"
-                    onClick={() => archiveSection(sec.id)}
-                    title={sec.archived ? t('sections.unarchive') : t('sections.archive')}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      {sec.archived
-                        ? <><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><polyline points="10 12 12 14 14 12"/><line x1="12" y1="8" x2="12" y2="14"/></>
-                        : <><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></>
-                      }
-                    </svg>
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    className="section-nav-delete"
-                    onClick={() => deleteSection(sec.id)}
-                    title={t('sections.delete')}
-                  >
-                    ×
-                  </button>
-                )}
-                {stats.total > 0 && (
-                  <div className="section-progress-track" title={`${pct}% completado`}>
-                    <div className="section-progress-fill" style={{ width: `${pct}%`, background: sec.color }} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+            <SortableContext items={displayedSections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+              {displayedSections.map((sec) => (
+                <SortableSectionItem
+                  key={sec.id}
+                  sec={sec}
+                  active={activeSection?.id === sec.id}
+                  canEdit={canEdit}
+                  stats={sectionTaskStats[sec.id] ?? { done: 0, total: 0 }}
+                  onSelect={() => setActiveSection(sec)}
+                  onShare={() => { setMembersSectionTarget(sec); setShowManageMembers(true); }}
+                  onArchive={() => archiveSection(sec.id)}
+                  onDelete={() => deleteSection(sec.id)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           {(project.sections || []).some(s => s.archived) && (
             <button
               className="sections-show-archived-btn"
@@ -517,6 +503,85 @@ function AddSectionInline({ onAdd }: { onAdd: (name: string, color: string) => P
         </button>
       </div>
     </form>
+  );
+}
+
+interface SortableSectionItemProps {
+  sec: Section;
+  active: boolean;
+  canEdit: boolean;
+  stats: { done: number; total: number };
+  onSelect: () => void;
+  onShare: () => void;
+  onArchive: () => void;
+  onDelete: () => void;
+}
+
+function SortableSectionItem({ sec, active, canEdit, stats, onSelect, onShare, onArchive, onDelete }: SortableSectionItemProps) {
+  const { t } = useTranslation();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sec.id, disabled: !canEdit });
+  const pct = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
+  return (
+    <div
+      ref={setNodeRef}
+      className={`section-nav-item ${active ? 'active' : ''} ${sec.archived ? 'archived' : ''} ${isDragging ? 'dragging' : ''}`}
+      style={{
+        ...(transform ? { transform: CSS.Transform.toString(transform) } : {}),
+        transition,
+        ...(isDragging ? { opacity: 0.5, zIndex: 10 } : {}),
+        '--sec-color': sec.color,
+      } as React.CSSProperties}
+      {...attributes}
+      {...listeners}
+    >
+      <button
+        className="section-nav-btn"
+        onClick={onSelect}
+      >
+        <span className="section-nav-dot" style={{ background: sec.color }} />
+        {sec.name}
+      </button>
+      {canEdit && (
+        <button
+          className="section-nav-share"
+          onClick={onShare}
+          title={t('members.shareSection')}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+        </button>
+      )}
+      {canEdit && (
+        <button
+          className="section-nav-archive"
+          onClick={onArchive}
+          title={sec.archived ? t('sections.unarchive') : t('sections.archive')}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {sec.archived
+              ? <><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><polyline points="10 12 12 14 14 12"/><line x1="12" y1="8" x2="12" y2="14"/></>
+              : <><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></>
+            }
+          </svg>
+        </button>
+      )}
+      {canEdit && (
+        <button
+          className="section-nav-delete"
+          onClick={onDelete}
+          title={t('sections.delete')}
+        >
+          ×
+        </button>
+      )}
+      {stats.total > 0 && (
+        <div className="section-progress-track" title={`${pct}% completado`}>
+          <div className="section-progress-fill" style={{ width: `${pct}%`, background: sec.color }} />
+        </div>
+      )}
+    </div>
   );
 }
 

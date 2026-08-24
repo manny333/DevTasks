@@ -21,6 +21,14 @@
   border-radius: 8px;
   background: transparent; color: var(--text-secondary);
   transition: background 0.12s, color 0.12s;
+  touch-action: none;
+  cursor: grab;
+}
+.section-nav-item:active { cursor: grabbing; }
+.section-nav-item.dragging {
+  opacity: 0.5;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  background: var(--bg-tertiary);
 }
 .section-nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 .section-nav-item.active {

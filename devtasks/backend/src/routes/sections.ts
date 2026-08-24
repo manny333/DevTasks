@@ -118,9 +118,24 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
 // PUT /api/projects/:projectId/sections/reorder — reorder sections
 router.put('/:projectId/sections/reorder', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const access = await getProjectAccess(req.userId!, req.params.projectId as string);
+    if (!access) { res.status(403).json({ error: 'No access to this project' }); return; }
+    if (!canEdit(access)) { res.status(403).json({ error: 'You have read-only access' }); return; }
+
     const { order } = req.body; // array of section IDs in new order
     if (!Array.isArray(order)) {
       res.status(400).json({ error: 'order must be an array of section IDs' });
+      return;
+    }
+
+    // Ensure all IDs belong to this project
+    const existing = await prisma.section.findMany({
+      where: { projectId: req.params.projectId as string },
+      select: { id: true },
+    });
+    const validIds = new Set(existing.map(s => s.id));
+    if (order.some((id: string) => !validIds.has(id))) {
+      res.status(400).json({ error: 'Invalid section IDs in order' });
       return;
     }
 
