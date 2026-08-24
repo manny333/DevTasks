@@ -5,7 +5,6 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import type { Project } from '../types';
 import AIImportModal from '../components/AI/AIImportModal';
-import balonImg from '../assets/balon_fifa_2026.png';
 
 const PROJECT_COLORS = ['#6366f1', '#f59e0b', '#22c55e', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#06b6d4'];
 const getProjectColor = (name: string) => PROJECT_COLORS[name.charCodeAt(0) % PROJECT_COLORS.length];
@@ -14,9 +13,6 @@ export default function Projects() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const overlayRef = useRef<HTMLDivElement>(null);
-  const ballAnimRef = useRef(0);
-  const ballElsRef = useRef<Map<number, HTMLImageElement>>(new Map());
-  const ballPhysicsRef = useRef<{ id: number; x: number; y: number; vx: number; vy: number; life: number }[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -34,93 +30,6 @@ export default function Projects() {
 
   const totalSections = useMemo(() => projects.reduce((s, p) => s + (p._count?.sections ?? 0), 0), [projects]);
   const totalMembers = useMemo(() => projects.reduce((s, p) => s + (p._count?.members ?? 0), 0), [projects]);
-
-  const { wcLabel } = useMemo(() => {
-    const now = Date.now();
-    const start = new Date('2026-06-11T00:00:00').getTime();
-    const end = new Date('2026-07-19T23:59:59').getTime();
-    const daysToWC = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
-    let label: string;
-    if (now < start) {
-      label = daysToWC === 1 ? '1 day to kickoff' : `${daysToWC} days to kickoff`;
-    } else if (now <= end) {
-      label = 'LIVE';
-    } else {
-      label = 'Finished';
-    }
-    return { wcLabel: label };
-  }, []);
-
-  const spawnBall = (clientX: number, clientY: number, vx?: number, vy?: number) => {
-    const id = Date.now() + Math.random();
-    const img = document.createElement('img');
-    img.src = balonImg;
-    img.style.cssText = `position:fixed;width:40px;height:40px;pointer-events:none;z-index:9999;left:${clientX - 20}px;top:${clientY - 20}px;transform:translateZ(0);will-change:transform;`;
-    document.body.appendChild(img);
-
-    ballElsRef.current.set(id, img);
-    ballPhysicsRef.current.push({ id, x: clientX - 20, y: clientY - 20, vx: vx ?? (Math.random() - 0.5) * 14, vy: vy ?? (-12 - Math.random() * 4), life: 1 });
-
-    if (!ballAnimRef.current) ballAnimRef.current = requestAnimationFrame(tickBalls);
-  };
-
-  const tickBalls = () => {
-    const GRAVITY = 0.5;
-    const BOUNCE = 0.65;
-    const SIZE = 40;
-
-    for (const b of ballPhysicsRef.current) {
-      b.vy += GRAVITY; b.x += b.vx; b.y += b.vy; b.life -= 0.004;
-      const right = window.innerWidth - SIZE;
-      const bottom = window.innerHeight - SIZE;
-      if (b.x < 0) { b.x = 0; b.vx = Math.abs(b.vx) * BOUNCE; }
-      if (b.x > right) { b.x = right; b.vx = -Math.abs(b.vx) * BOUNCE; }
-      if (b.y > bottom) { b.y = bottom; b.vy = -Math.abs(b.vy) * BOUNCE; }
-      const el = ballElsRef.current.get(b.id);
-      if (el) { el.style.left = `${b.x}px`; el.style.top = `${b.y}px`; el.style.opacity = String(Math.max(0, b.life)); }
-    }
-
-    const keep: { id: number; x: number; y: number; vx: number; vy: number; life: number }[] = [];
-    const dead: number[] = [];
-    for (const b of ballPhysicsRef.current) {
-      if (b.life <= 0 || b.y > window.innerHeight + 100) dead.push(b.id);
-      else keep.push(b);
-    }
-
-    for (const id of dead) { ballElsRef.current.get(id)?.remove(); ballElsRef.current.delete(id); }
-    ballPhysicsRef.current = keep;
-
-    if (ballPhysicsRef.current.length > 0) ballAnimRef.current = requestAnimationFrame(tickBalls);
-    else ballAnimRef.current = 0;
-  };
-
-  const handleBallsClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('.modal-overlay, .project-card-menu-btn, .project-card-dropdown, .btn-hero-create, .btn-primary, .btn-ai, .projects-search-input, input, textarea, .modal, a')) return;
-    spawnBall(e.clientX, e.clientY);
-  };
-
-  useEffect(() => () => {
-    cancelAnimationFrame(ballAnimRef.current);
-    for (const el of ballElsRef.current.values()) el.remove();
-    ballElsRef.current.clear();
-    ballPhysicsRef.current = [];
-  }, []);
-
-  useEffect(() => {
-    if (loading) return;
-    const timer = setTimeout(() => {
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 3;
-      const count = 20;
-      for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.8;
-        const speed = 8 + Math.random() * 8;
-        spawnBall(cx + (Math.random() - 0.5) * 40, cy + (Math.random() - 0.5) * 40, Math.cos(angle) * speed, Math.sin(angle) * speed);
-      }
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [loading]);
 
   const closeCreate = () => {
     setShowCreate(false);
@@ -189,29 +98,13 @@ export default function Projects() {
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
   return (
-    <div className="projects-page" onClick={handleBallsClick}>
+    <div className="projects-page">
       {/* Hero Banner */}
       <div className="projects-hero">
         <div className="projects-hero-dots" />
 
         <div className="projects-hero-content">
           <div className="projects-hero-left">
-            {/* World Cup 2026 Badge */}
-            <div className="wc-badge">
-              <svg className="wc-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
-                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-                <path d="M4 22h16"/>
-                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-              </svg>
-              <span className="wc-badge-label">World Cup 2026</span>
-              <span className="wc-badge-sep">·</span>
-              <span className="wc-badge-count">{wcLabel}</span>
-              <span className="wc-badge-hosts">USA · Canada · Mexico</span>
-            </div>
-
             <h1 className="projects-hero-title">
               {user?.name ? `${user.name.split(' ')[0]}'s ${t('projects.title')}` : t('projects.title')}
             </h1>
