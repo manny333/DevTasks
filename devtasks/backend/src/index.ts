@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 
@@ -58,6 +59,20 @@ app.use('/api/projects', exportRoutes);  // /api/projects/:projectId/export
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Serve frontend static build (production)
+const STATIC_DIR = process.env.STATIC_DIR || path.join(__dirname, '../../frontend/dist');
+if (fs.existsSync(STATIC_DIR)) {
+  app.use(express.static(STATIC_DIR));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      return res.sendFile(path.join(STATIC_DIR, 'index.html'));
+    }
+    next();
+  });
+} else {
+  console.log(`[static] Frontend build not found at ${STATIC_DIR} — serving API only`);
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 DevTasks API running on http://localhost:${PORT}`);
