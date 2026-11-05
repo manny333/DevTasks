@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  contract:
+    name: Shared type contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node devtasks/shared/check.mjs
+
+  backend:
+    name: Backend (types + authz)
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/kanvy
+      JWT_SECRET: ci-test-secret
+    defaults:
+      run:
+        working-directory: devtasks/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: devtasks/backend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:http
+
+  frontend:
+    name: Frontend (types + lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: devtasks/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: devtasks/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint

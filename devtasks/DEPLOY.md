@@ -23,7 +23,7 @@ Usuario → https://app.tudominio.eu.org ──→ Edge de Cloudflare (HTTPS aut
 
 **Decisión de diseño**: un solo hostname y un solo puerto. Express sirve también el
 frontend compilado (`dist/`), así todo comparte origen: no hay CORS, solo un túnel,
-una URL. Esto requiere los cambios de la Fase 2 (aún no implementados).
+una URL. La Fase 2 ya está implementada (commit `cb6d158` y posteriores).
 
 ---
 
@@ -64,17 +64,22 @@ una URL. Esto requiere los cambios de la Fase 2 (aún no implementados).
 
 ---
 
-## Fase 2 — Cambios de código (PENDIENTES de implementar)
+## Fase 2 — Cambios de código (IMPLEMENTADO)
 
-> Estos cambios aún NO están en el repo. Pedir al asistente que los aplique antes
-> de la Fase 4:
+> Verificado en el código actual. Solo hay que respetar los pasos de build.
 
-| # | Cambio | Detalle |
+| # | Cambio | Estado |
 |---|---|---|
-| 1 | Express sirve `frontend/dist/` | Static + fallback SPA para react-router (excepto `/api` y `/uploads`), ruta configurable por env `STATIC_DIR` |
-| 2 | `.env.production` en frontend | `VITE_API_URL=/api` para que el build use la API del mismo origen |
-| 3 | `deploy.ps1` | Script: build backend → build frontend → arranca Express en producción |
-| 4 | (Opcional) ruta absoluta de uploads | Si Express corre como servicio con otro `cwd`, fijar `UPLOADS_DIR` absoluto |
+| 1 | Express sirve `frontend/dist/` | ✅ `src/index.ts` (static + fallback SPA, `STATIC_DIR` configurable) |
+| 2 | `.env.production` en frontend | ⚠️ crearlo antes del build con `VITE_API_URL=/api` (no se commitea) |
+| 3 | Build de producción | ✅ `npm run build` en backend y frontend |
+| 4 | Ruta absoluta de uploads | ✅ firmada con HMAC; `UPLOADS_SECRET` opcional |
+
+Además, desde el endurecimiento de seguridad:
+
+- `/uploads` ya no es una carpeta estática: cada URL lleva `exp` + `sig` y caduca a los 7 días.
+- El stream SSE usa `POST /api/notifications/stream-ticket` (ticket de 60 s, un solo uso).
+- Detrás de Cloudflare hay que definir `TRUST_PROXY=1` para que la IP real llegue a los rate limits.
 
 ---
 
@@ -155,6 +160,9 @@ docker compose ps   # PostgreSQL debe estar Up (puerto 5433)
 | `GOOGLE_CLIENT_ID` | (ya configurado — no tocar) |
 | `PORT` | `5001` |
 | `CORS_ORIGIN` | `http://localhost:5173,http://localhost:5174` (solo dev; en prod no aplica por mismo origen) |
+| `TRUST_PROXY` | `1` (detrás de Cloudflare) |
+| `UPLOADS_SECRET` | secreto aleatorio para firmar URLs de adjuntos (si falta usa `JWT_SECRET`) |
+| `AI_ALLOWED_BASE_URLS` | opcional, solo si se usa un gateway propio de IA |
 
 ### 4.3 Build
 
@@ -215,13 +223,25 @@ schtasks /create /tn "KanvyBackend" /tr "cmd /c cd /d C:\Users\EMMAN\OneDrive\Do
 
 ---
 
+## Fase 6.1 — Respaldos
+
+- **PostgreSQL:** `pg_dump` programado sobre la base `devtasks` (o backup del volumen `pgdata`).
+- **Adjuntos:** copiar `backend/uploads/`; los archivos no viven en la base de datos.
+- Sin estos dos respaldos, un fallo de disco pierde proyectos y archivos a la vez.
+
+---
+
 ## Fase 7 — Verificación final
 
 - [ ] `https://app.tudominio.eu.org/api/health` responde `ok`
 - [ ] Login con Google funciona desde la URL pública
 - [ ] Drag & drop de tareas y secciones funciona
-- [ ] Subir un archivo adjunto y verificar que se descarga (uploads)
+- [ ] Subir un archivo adjunto y verificar que la descarga funciona con la URL firmada
+- [ ] Confirmar que una URL de `/uploads/...` sin `sig` responde 403
 - [ ] IA funciona (las API keys siguen guardadas en BD por usuario)
+- [ ] `cd backend && npm test` → 0 handlers sin guard
+- [ ] `cd backend && npm run test:runtime` → 26/26 comprobaciones contra la BD real
+- [ ] `cd backend && npm run smoke:runtime` → 14/14 (adjuntos firmados + ticket SSE)
 - [ ] Reiniciar la PC → esperar 2 min → la app vuelve sola
 
 ---

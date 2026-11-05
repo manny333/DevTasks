@@ -131,3 +131,19 @@
 | 14 | `286ceea` | feat: Excel export with Kanvy branding |
 | 15 | `bbcce2c` | feat: replace native date inputs with react-day-picker v9 |
 | 16 | `b87f560` | feat: date labels + direct date editing |
+
+---
+
+## Endurecimiento — Noviembre 2026
+
+| Área | Cambio |
+|---|---|
+| **Autorización** | Guards `requireProjectAccess` / `requireSectionAccess` / `requireTaskAccess` en todos los handlers de datos; `getProjectAccess` ya no agrega acceso de sección; `GET /projects/:slug` filtra secciones/tareas según el scope |
+| **Adjuntos** | Extensión derivada del MIME verificado por magic bytes; `/uploads` deja de ser estático y usa URLs HMAC con expiración |
+| **SSE** | Ticket de un solo uso (60 s) para el stream; el JWT ya no viaja en la URL; reconexión con backoff |
+| **IA** | Allowlist de `baseUrl` contra hosts oficiales, timeout 60 s (300 s en streaming), rate limit 20 req/5 min, `apply` transaccional y `existingSectionId` validado |
+| **Integridad** | Movimientos de tarea y reorder transaccionales; tags/dependencias solo del mismo proyecto; validación de sección destino |
+| **Auditoría** | Se registran `TASK_UPDATED`, `TASK_DELETED`, subtareas, adjuntos y `COMMENT_DELETED`; `ActivityLog` sobrevive al borrado de la tarea (`ON DELETE SET NULL`) |
+| **Rendimiento** | Índices de FK, paginación opcional (`limit`/`offset`) y búsqueda con acceso por sección/tarea |
+| **Calidad** | Lint en verde, `npm test` de cobertura de autorización, CI en GitHub Actions, contrato de tipos compartido |
+| **UX** | Sin `alert()`; toasts traducidos; fechas sin desfase por zona horaria; borrados pendientes ya no se pierden |

@@ -18,7 +18,7 @@ devtasks/
 │   ├── src/routes/   # Endpoints REST
 │   ├── src/lib/      # Prisma client, access control, AI providers, SSE
 │   ├── src/middleware/# auth.ts (JWT verify)
-│   └── prisma/       # Schema (16 modelos, 5 enums), migraciones, seeds
+│   └── prisma/       # Schema (17 modelos, 5 enums), migraciones, seeds
 ├── frontend/         # SPA React 19 + Vite, puerto 5173
 │   ├── src/pages/    # Login, Projects, ProjectBoard, Settings
 │   ├── src/components/
@@ -31,6 +31,7 @@ devtasks/
 │   ├── src/services/ # api.ts (Axios + JWT interceptor)
 │   ├── src/i18n/     # en.json, es.json (~200 claves)
 │   └── src/styles/   # globals.css, theme.css, kanban.css
+├── shared/           # Contrato de tipos + check de drift (CI)
 └── docker-compose.yml # PostgreSQL 15, puerto 5433
 ```
 
@@ -39,6 +40,8 @@ devtasks/
 ### Backend
 - `npm run dev` — Iniciar en modo desarrollo con tsx watch (directorio: `backend/`)
 - `npm run build` — Compilar TypeScript
+- `npm test` — Test de cobertura de autorización (no requiere base de datos)
+- `npm run typecheck` — `tsc --noEmit`
 - `npx prisma migrate dev` — Ejecutar migraciones pendientes
 - `npx prisma generate` — Regenerar Prisma Client
 - `npx prisma db seed` — Sembrar datos de prueba
@@ -96,10 +99,23 @@ devtasks/
 4. **Ejecutar migraciones pendientes** si se tocó el schema:
    - `cd backend && npm run db:migrate`
 
+5. **Test de autorización** — ningún handler de datos puede quedar sin guard:
+   - `cd backend && npm test`
+   - Prueba HTTP con dos cuentas y Prisma simulado (sin BD): `npm run test:http`
+   - Prueba contra Postgres real (con el servidor arriba): `npm run test:runtime`
+
+6. **Contrato de tipos compartido** — Prisma, shared y frontend deben coincidir:
+   - `cd .. && node shared/check.mjs`
+
 ## Seguridad
 - JWT se almacena en localStorage y se envía como Bearer token
 - Middleware `auth.ts` valida JWT en cada request protegido
-- Control de acceso en cascada: verificar pertenencia al proyecto/sección/tarea antes de operar
-- API keys de IA se almacenan en BD, encriptadas (campo `api_key` en `UserApiKey`)
-- `.env` NUNCA se commitea (excluido en `.gitignore`)
+- Control de acceso en cascada: `getProjectAccess` (solo nivel proyecto), `getSectionAccess` (una sección), `getTaskAccess` (tarea). Los grants de sección/tarea nunca escalan a todo el proyecto
+- Guards reutilizables: `requireProjectAccess`, `requireSectionAccess`, `requireTaskAccess`, `ensureProjectAccess`, `ensureSectionAccess`
+- `npm test` escanea todas las rutas y falla si un handler de datos no resuelve acceso (`scripts/authz-coverage.mjs`)
+- Adjuntos: MIME verificado por magic bytes y URLs firmadas con expiración (HMAC). No existe carpeta `/uploads` pública
+- SSE: ticket de un solo uso de 60 s (`POST /api/notifications/stream-ticket`); el JWT no viaja en la URL
+- IA: `baseUrl` restringido a hosts oficiales o `AI_ALLOWED_BASE_URLS`, timeout de 60 s y rate limit por usuario
+- API keys de IA por usuario en `UserApiKey` (texto plano; cifrado en reposo pendiente)
+- `.env` NUNCA se commitea (excluido en `.gitignore`); hay `.env.example` en backend y frontend
 - CORS configurado con orígenes específicos en producción
