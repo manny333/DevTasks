@@ -11,6 +11,18 @@
   "projects": {
     "title": "My Projects",
     "subtitle": "Manage and organize your development workflow",
+    "greeting": "Hi, {{name}}",
+    "workspace": "Workspace",
+    "noDescription": "No description",
+    "results": "{{count}} projects",
+    "results_one": "{{count}} project",
+    "results_other": "{{count}} projects",
+    "sections_one": "{{count}} section",
+    "sections_other": "{{count}} sections",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "createHint": "Start from scratch",
+    "noResults": "No projects match your search.",
     "create": "New Project",
     "name": "Project name",
     "namePlaceholder": "Project name...",
@@ -54,10 +66,12 @@
     "unarchive": "Unarchive section",
     "showArchived": "Show archived",
     "hideArchived": "Hide archived",
-    "noSections": "No sections yet. Create one to get started."
+    "noSections": "No sections yet. Create one to get started.",
+    "deleteToast": "Section \"{{title}}\" deleted"
   },
   "tasks": {
     "create": "New Task",
+    "deleteToast": "Task \"{{title}}\" deleted",
     "title": "Task title",
     "description": "Description (markdown supported)",
     "status": {
@@ -153,7 +167,9 @@
     "close": "Close",
     "loading": "Loading...",
     "search": "Search tasks and projects...",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "projectNotFound": "Project not found",
+    "notice": "Notice"
   },
   "shortcuts": {
     "newTask": "New task",

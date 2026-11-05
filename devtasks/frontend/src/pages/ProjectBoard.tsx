@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import type { Project, Section, Tag, Task } from '../types';
-import Board from '../components/Kanban/Board';
-import CalendarBoard from '../components/Calendar/CalendarBoard';
-import ListView from '../components/ListView/ListView';
-import GanttBoard from '../components/Gantt/GanttBoard';
-import TaskModal from '../components/Kanban/TaskModal';
-import AIImportModal from '../components/AI/AIImportModal';
 import ManageTagsModal from '../components/Tags/ManageTagsModal';
 import ManageMembersModal from '../components/Members/ManageMembersModal';
+import AIImportModal from '../components/AI/AIImportModal';
 import UndoToast from '../components/UndoToast';
+
+// Heavy views and the task drawer are split into their own chunks.
+const Board = lazy(() => import('../components/Kanban/Board'));
+const CalendarBoard = lazy(() => import('../components/Calendar/CalendarBoard'));
+const ListView = lazy(() => import('../components/ListView/ListView'));
+const GanttBoard = lazy(() => import('../components/Gantt/GanttBoard'));
+const TaskModal = lazy(() => import('../components/Kanban/TaskModal'));
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -74,7 +76,10 @@ export default function ProjectBoard() {
     const remaining = (project?.sections || []).filter((s) => s.id !== id);
     setProject((prev) => prev ? { ...prev, sections: remaining } : prev);
     if (activeSection?.id === id) setActiveSection(remaining.find(s => !s.archived) ?? null);
-    if (deleteSectionTimerRef.current) clearTimeout(deleteSectionTimerRef.current);
+    if (deleteSectionTimerRef.current && pendingDeleteSection) {
+      clearTimeout(deleteSectionTimerRef.current);
+      void api.delete(`/sections/${pendingDeleteSection.id}`).catch(() => { /* ignore */ });
+    }
     setPendingDeleteSection(sec);
     deleteSectionTimerRef.current = setTimeout(async () => {
       await api.delete(`/sections/${id}`);
@@ -128,8 +133,7 @@ export default function ProjectBoard() {
   const handleMoveSection = async (task: Task, sectionId: string) => {
     try {
       await api.patch(`/tasks/${task.id}/move-section`, { sectionId });
-      const targetSection = project?.sections?.find((s) => s.id === sectionId);
-      setSelectedTask((prev) => prev ? { ...prev, sectionId, section: targetSection as any } : null);
+      setSelectedTask((prev) => prev ? { ...prev, sectionId } : null);
       // Reload project to get updated tasks
       if (slug) {
         const res = await api.get(`/projects/${slug}`);
@@ -139,9 +143,13 @@ export default function ProjectBoard() {
   };
 
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
-  if (!project) return <div className="error-state">Project not found</div>;
+  if (!project) return <div className="error-state">{t('common.projectNotFound')}</div>;
 
   const canEdit = !project.myAccess || project.myAccess.level === 'owner' || project.myAccess.accessType !== 'VIEWER';
+  // Project-wide actions (sections, members, tags, AI import, export) need access
+  // at project level; a section/task grant only manages its own section.
+  const canManageProject = canEdit
+    && (!project.myAccess || project.myAccess.level === 'owner' || project.myAccess.level === 'project');
 
   const displayedSections = (project.sections || []).filter(sec => showArchivedSections ? true : !sec.archived);
 
@@ -180,6 +188,7 @@ export default function ProjectBoard() {
                   sec={sec}
                   active={activeSection?.id === sec.id}
                   canEdit={canEdit}
+                  canReorder={canManageProject}
                   stats={sectionTaskStats[sec.id] ?? { done: 0, total: 0 }}
                   onSelect={() => setActiveSection(sec)}
                   onShare={() => { setMembersSectionTarget(sec); setShowManageMembers(true); }}
@@ -204,9 +213,9 @@ export default function ProjectBoard() {
             </button>
           )}
         </nav>
-        {canEdit && <AddSectionInline onAdd={addSection} />}
+        {canManageProject && <AddSectionInline onAdd={addSection} />}
         <div className="sidebar-section-divider" />
-        {canEdit && (
+        {canManageProject && (
           <button className="add-section-btn" onClick={() => { setMembersSectionTarget(null); setShowManageMembers(true); }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -215,12 +224,12 @@ export default function ProjectBoard() {
             {t('members.title')}
           </button>
         )}
-        {canEdit && (
+        {canManageProject && (
           <button className="add-section-btn" onClick={() => setShowManageTags(true)}>
             🏷 {t('tags.title')}
           </button>
         )}
-        {canEdit && (
+        {canManageProject && (
           <button className="add-section-btn" onClick={() => setShowAIImport(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
@@ -228,7 +237,7 @@ export default function ProjectBoard() {
             {t('ai.importButton')}
           </button>
         )}
-        <button className="add-section-btn" onClick={async () => {
+        {canManageProject && <button className="add-section-btn" onClick={async () => {
           if (project) {
             try {
               const res = await api.get(`/projects/${project.id}/export`, { responseType: 'blob' });
@@ -247,7 +256,7 @@ export default function ProjectBoard() {
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
           {t('export.title')}
-        </button>
+        </button>}
       </aside>
 
       {/* Board area */}
@@ -293,6 +302,7 @@ export default function ProjectBoard() {
           </button>
         </div>
 
+        <Suspense fallback={<div className="loading-screen"><div className="spinner" /></div>}>
         {viewMode === 'kanban' ? (
           activeSection ? (
             <Board
@@ -325,10 +335,12 @@ export default function ProjectBoard() {
             onTaskClick={(task) => setSelectedTask(task)}
           />
         )}
+        </Suspense>
       </main>
 
       {selectedTask && (
-        <TaskModal
+        <Suspense fallback={null}>
+          <TaskModal
           task={selectedTask}
           projectTags={project.tags || []}
           projectMembers={project.members || []}
@@ -339,6 +351,7 @@ export default function ProjectBoard() {
           onUpdate={(updated) => setSelectedTask(updated)}
           onDelete={async () => setSelectedTask(null)}
         />
+        </Suspense>
       )}
 
       {showManageTags && (
@@ -360,7 +373,7 @@ export default function ProjectBoard() {
 
       {pendingDeleteSection && (
         <UndoToast
-          message={`Sección "${pendingDeleteSection.name}" eliminada`}
+          message={t('sections.deleteToast', { title: pendingDeleteSection.name })}
           onUndo={undoDeleteSection}
           onDismiss={() => setPendingDeleteSection(null)}
         />
@@ -440,6 +453,7 @@ interface SortableSectionItemProps {
   sec: Section;
   active: boolean;
   canEdit: boolean;
+  canReorder: boolean;
   stats: { done: number; total: number };
   onSelect: () => void;
   onShare: () => void;
@@ -447,9 +461,9 @@ interface SortableSectionItemProps {
   onDelete: () => void;
 }
 
-function SortableSectionItem({ sec, active, canEdit, stats, onSelect, onShare, onArchive, onDelete }: SortableSectionItemProps) {
+function SortableSectionItem({ sec, active, canEdit, canReorder, stats, onSelect, onShare, onArchive, onDelete }: SortableSectionItemProps) {
   const { t } = useTranslation();
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sec.id, disabled: !canEdit });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: sec.id, disabled: !canReorder });
   const pct = stats.total > 0 ? Math.round(stats.done / stats.total * 100) : 0;
   return (
     <div

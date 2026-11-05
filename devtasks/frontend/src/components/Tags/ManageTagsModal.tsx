@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
+import { getApiErrorMessage } from '../../utils/errors';
 import type { Tag } from '../../types';
 
 interface ManageTagsModalProps {
@@ -43,8 +44,8 @@ export default function ManageTagsModal({ projectId, tags, onClose, onTagsChange
       setLocalTags(updated);
       onTagsChange(updated);
       setName('');
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Error creating tag');
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Error creating tag'));
     } finally {
       setSaving(false);
     }

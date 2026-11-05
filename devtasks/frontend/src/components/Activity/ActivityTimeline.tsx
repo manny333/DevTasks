@@ -13,7 +13,6 @@ export default function ActivityTimeline({ taskId }: ActivityTimelineProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
     api
       .get(`/tasks/${taskId}/activity`)
       .then((res) => setActivities(res.data))

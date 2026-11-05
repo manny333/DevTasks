@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
+import { getApiErrorMessage } from '../../utils/errors';
 import AIImportPreview from './AIImportPreview';
 import DatePickerInput from '../common/DatePicker';
 
@@ -21,6 +22,19 @@ interface Provider {
   hasUserKey: boolean;
 }
 
+interface PreviewTask {
+  tempId: string;
+  title: string;
+  description?: string;
+  section: string;
+  tags: { name: string; action?: string }[];
+  assignees: { email: string; name?: string; found?: boolean; userId?: string }[];
+  subtasks: { title: string }[];
+  startDate?: string;
+  dueDate?: string;
+  selected: boolean;
+}
+
 interface PreviewSection {
   tempId: string;
   name: string;
@@ -28,7 +42,7 @@ interface PreviewSection {
   action: 'create' | 'reuse';
   existingSectionId?: string;
   color?: string;
-  tasks: any[];
+  tasks: PreviewTask[];
   selected: boolean;
 }
 
@@ -95,7 +109,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error((errData as any).error || `Server error ${response.status}`);
+        throw new Error((errData as { error?: string }).error || `Server error ${response.status}`);
       }
 
       const reader = response.body!.getReader();
@@ -128,9 +142,9 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
           } catch { /* skip malformed SSE lines */ }
         }
       }
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
-      setError(err?.message || t('ai.errorGenerate'));
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      setError(getApiErrorMessage(err, t('ai.errorGenerate')));
     } finally {
       setGenerating(false);
       abortRef.current = null;
@@ -160,8 +174,8 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
       const res = await api.post('/ai/apply', { projectId: targetProjectId, preview });
       setImportResult(res.data.created);
       onImported?.();
-    } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || t('ai.errorApply'));
+    } catch (err) {
+      setError(getApiErrorMessage(err, t('ai.errorApply')));
     } finally {
       setImporting(false);
     }

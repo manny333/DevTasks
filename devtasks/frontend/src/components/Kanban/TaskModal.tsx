@@ -4,10 +4,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
+import { getApiErrorMessage } from '../../utils/errors';
 import { useAuth } from '../../context/AuthContext';
-import type { Task, Tag, Comment, Section, TaskAssignee, TaskAttachment, ProjectMember, Subtask, TaskDependency } from '../../types';
-import AttachmentDropZone from './AttachmentDropZone';
+import type { Task, Tag, Comment, Section, TaskAssignee, ProjectMember, Subtask, TaskDependency } from '../../types';
 import MentionTextarea from './MentionTextarea';
+import TaskAttachments from './TaskAttachments';
 import ActivityTimeline from '../Activity/ActivityTimeline';
 import DatePickerInput from '../common/DatePicker';
 
@@ -26,8 +27,6 @@ interface TaskModalProps {
 export default function TaskModal({ task, projectTags, projectMembers = [], canEdit = true, allSections, onClose, onUpdate, onDelete, onMoveSection }: TaskModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const backendBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(/\/api\/?$/, '');
-  const getAttachmentUrl = (url: string) => (url.startsWith('http') ? url : `${backendBaseUrl}${url}`);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
@@ -55,12 +54,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const tagPickerRef = useRef<HTMLDivElement>(null);
   const tagBtnRef = useRef<HTMLButtonElement>(null);
 
-  const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
-  const [attachmentUploading, setAttachmentUploading] = useState(false);
-  const [attachmentView, setAttachmentView] = useState<'grid' | 'list'>('grid');
-  const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null);
-
-  const [attachmentsExpanded, setAttachmentsExpanded] = useState(true);
   const [activityExpanded, setActivityExpanded] = useState(false);
 
   const [subtasks, setSubtasks] = useState<Subtask[]>(task.subtasks ?? []);
@@ -75,6 +68,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
   const [blocksDeps, setBlocksDeps] = useState<TaskDependency[]>(task.blocks ?? []);
   const [depSearchQuery, setDepSearchQuery] = useState('');
   const [depPickerOpen, setDepPickerOpen] = useState(false);
+  const [dependencyError, setDependencyError] = useState('');
   const [depsExpanded, setDepsExpanded] = useState(true);
   const depPickerRef = useRef<HTMLDivElement>(null);
   const depInputRef = useRef<HTMLInputElement>(null);
@@ -121,10 +115,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
 
   useEffect(() => {
     api.get(`/tasks/${task.id}/assignees`).then((res) => setAssignees(res.data));
-  }, [task.id]);
-
-  useEffect(() => {
-    api.get(`/tasks/${task.id}/attachments`).then((res) => setAttachments(res.data));
   }, [task.id]);
 
   useEffect(() => {
@@ -234,10 +224,11 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
       setBlockedByDeps((prev) => [...prev, res.data]);
       setDepSearchQuery('');
       setDepPickerOpen(false);
+      setDependencyError('');
     } catch (err: unknown) {
       const axErr = err as { response?: { data?: { error?: string } } };
       const msg = axErr?.response?.data?.error;
-      if (msg?.includes('circular')) alert(t('dependencies.circularError'));
+      setDependencyError(msg?.includes('circular') ? t('dependencies.circularError') : (msg ?? ''));
     }
   };
 
@@ -263,34 +254,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     setSaveState('idle');
   }, [task.id, task.title, task.description, task.dueDate, task.startDate]);
 
-  const handleFiles = async (files: File[]) => {
-    if (!files.length) return;
-    setAttachmentUploading(true);
-    try {
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await api.post(`/tasks/${task.id}/attachments`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        setAttachments((prev) => [...prev, res.data]);
-      }
-    } catch { /* ignore */ } finally {
-      setAttachmentUploading(false);
-    }
-  };
-
-  const deleteAttachment = async (id: string) => {
-    await api.delete(`/tasks/${task.id}/attachments/${id}`);
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   const addAssignee = async (userId: string) => {
     setAssigneeError('');
     setAssigneeAdding(true);
@@ -304,8 +267,8 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
       const newAssignees = [...assignees, res.data];
       setAssignees(newAssignees);
       onUpdate({ ...task, assignees: newAssignees });
-    } catch (err: any) {
-      setAssigneeError(err?.response?.data?.error || t('members.inviteError'));
+    } catch (err) {
+      setAssigneeError(getApiErrorMessage(err, t('members.inviteError')));
     } finally {
       setAssigneeAdding(false);
     }
@@ -333,17 +296,15 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
     } catch { /* ignore */ }
   };
 
-  // Close on Escape — lightbox first, then modal
+  // Close on Escape. While the attachments lightbox is open, TaskAttachments
+  // handles Escape in the capture phase and stops it before it reaches here.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (lightbox) setLightbox(null);
-        else onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose, lightbox]);
+  }, [onClose]);
 
   useEffect(() => {
     return () => {
@@ -373,12 +334,12 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
 
     if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     autosaveTimerRef.current = setTimeout(() => {
-      void persistTask({
+      persistTask({
         title: title.trim(),
         description: description.trim() || '',
         dueDate: dueDate || null,
         startDate: startDate || null,
-      });
+      }).catch(() => { /* saveState is already 'error' */ });
     }, 700);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, description, dueDate, startDate, canEdit, task.id]);
@@ -842,6 +803,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </div>
+          {dependencyError && <p className="task-deps-error" role="alert">{dependencyError}</p>}
           {depsExpanded && (
             <div className="task-modal-section-collapse-body">
               {blockedByDeps.length > 0 && (
@@ -914,160 +876,7 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
         </div>
 
         {/* Attachments */}
-        <div className="task-modal-section-collapse">
-          <div className="task-modal-section-collapse-header" onClick={() => setAttachmentsExpanded(!attachmentsExpanded)}>
-            <h3 className="task-modal-attachments-title">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-              </svg>
-              {t('attachments.title')}
-              {attachments.length > 0 && <span className="attachment-count">{attachments.length}</span>}
-            </h3>
-            <svg className={`task-modal-section-collapse-arrow${attachmentsExpanded ? ' open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </div>
-          {attachmentsExpanded && (
-            <div className="task-modal-section-collapse-body">
-              <div className="task-modal-attachments-header" style={{ paddingTop: 0 }}>
-                {attachments.length > 0 && (
-                  <div className="attachment-view-toggle">
-                    <button
-                      className={`attachment-view-btn${attachmentView === 'grid' ? ' active' : ''}`}
-                      onClick={() => setAttachmentView('grid')}
-                      title={t('attachments.viewGrid')}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="3" y="3" width="8" height="8" rx="1"/>
-                        <rect x="13" y="3" width="8" height="8" rx="1"/>
-                        <rect x="3" y="13" width="8" height="8" rx="1"/>
-                        <rect x="13" y="13" width="8" height="8" rx="1"/>
-                      </svg>
-                    </button>
-                    <button
-                      className={`attachment-view-btn${attachmentView === 'list' ? ' active' : ''}`}
-                      onClick={() => setAttachmentView('list')}
-                      title={t('attachments.viewList')}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                        <line x1="3" y1="6" x2="21" y2="6"/>
-                        <line x1="3" y1="12" x2="21" y2="12"/>
-                        <line x1="3" y1="18" x2="21" y2="18"/>
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-          {attachments.length > 0 && (
-            attachmentView === 'grid' ? (
-              <div className="attachment-grid">
-                {attachments.map((a) => {
-                  const isImage = a.mimeType.startsWith('image/');
-                  const fullUrl = getAttachmentUrl(a.url);
-                  return (
-                    <div key={a.id} className="attachment-grid-cell">
-                      {isImage ? (
-                        <button
-                          className="attachment-grid-thumb-btn"
-                          onClick={() => setLightbox({ url: fullUrl, name: a.filename })}
-                          title={a.filename}
-                        >
-                          <img className="attachment-grid-img" src={fullUrl} alt={a.filename} loading="lazy" />
-                        </button>
-                      ) : (
-                        <a
-                          className="attachment-grid-pdf"
-                          href={fullUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={a.filename}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                            <line x1="9" y1="13" x2="15" y2="13"/>
-                            <line x1="9" y1="17" x2="13" y2="17"/>
-                          </svg>
-                          <span className="attachment-grid-pdf-name">{a.filename}</span>
-                        </a>
-                      )}
-                      {canEdit && (
-                        <button
-                          className="attachment-grid-delete"
-                          title={t('attachments.delete')}
-                          onClick={() => deleteAttachment(a.id)}
-                        >×</button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="attachment-list">
-                {attachments.map((a) => {
-                  const isImage = a.mimeType.startsWith('image/');
-                  const fullUrl = getAttachmentUrl(a.url);
-                  return (
-                    <div key={a.id} className="attachment-item">
-                      {isImage ? (
-                        <button
-                          className="attachment-thumb-btn"
-                          onClick={() => setLightbox({ url: fullUrl, name: a.filename })}
-                          title={a.filename}
-                        >
-                          <img className="attachment-thumb" src={fullUrl} alt={a.filename} loading="lazy" />
-                        </button>
-                      ) : (
-                        <a
-                          className="attachment-pdf-icon"
-                          href={fullUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={a.filename}
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                          </svg>
-                        </a>
-                      )}
-                      <div className="attachment-meta">
-                        {isImage ? (
-                          <button
-                            className="attachment-name attachment-name-btn"
-                            onClick={() => setLightbox({ url: fullUrl, name: a.filename })}
-                          >{a.filename}</button>
-                        ) : (
-                          <a className="attachment-name" href={fullUrl} target="_blank" rel="noopener noreferrer">
-                            {a.filename}
-                          </a>
-                        )}
-                        <span className="attachment-size">{formatBytes(a.size)}</span>
-                      </div>
-                      {canEdit && (
-                        <button
-                          className="btn-icon attachment-delete"
-                          title={t('attachments.delete')}
-                          onClick={() => deleteAttachment(a.id)}
-                        >×</button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )
-          )}
-
-              {canEdit && (
-                <AttachmentDropZone
-                  onFiles={handleFiles}
-                  uploading={attachmentUploading}
-                />
-              )}
-            </div>
-          )}
-        </div>
+        <TaskAttachments taskId={task.id} canEdit={canEdit} />
 
         {/* Activity */}
         <div className="task-modal-section-collapse">
@@ -1125,27 +934,6 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
           </form>
         </div>
       </div>
-
-      {/* Lightbox */}
-      {lightbox && createPortal(
-        <div
-          className="attachment-lightbox-overlay"
-          onClick={() => setLightbox(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={lightbox.name}
-        >
-          <button className="attachment-lightbox-close" onClick={() => setLightbox(null)}>×</button>
-          <img
-            className="attachment-lightbox-img"
-            src={lightbox.url}
-            alt={lightbox.name}
-            onClick={(e) => e.stopPropagation()}
-          />
-          <span className="attachment-lightbox-name">{lightbox.name}</span>
-        </div>,
-        document.body
-      )}
     </div>
   );
 }

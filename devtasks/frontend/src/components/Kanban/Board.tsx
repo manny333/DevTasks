@@ -11,7 +11,8 @@ import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import CreateTaskModal from './CreateTaskModal';
 import UndoToast from '../UndoToast';
-import FilterBar, { getDueDateRange } from '../Filters/FilterBar';
+import BoardHeader from './BoardHeader';
+import { getDueDateRange } from '../../utils/dates';
 
 const COLUMNS: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
 
@@ -42,6 +43,7 @@ export default function Board({ section, projectTags, allSections, projectMember
   const [overColumnStatus, setOverColumnStatus] = useState<TaskStatus | null>(null);
   const [createDefaults, setCreateDefaults] = useState<CreateDefaults | null>(null);
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isMobileView, setIsMobileView] = useState(false);
   const [mobileStatusTab, setMobileStatusTab] = useState<TaskStatus>('TODO');
   const [filters, setFilters] = useState<TaskFilters>(DEFAULT_FILTERS);
@@ -73,7 +75,6 @@ export default function Board({ section, projectTags, allSections, projectMember
 
   useEffect(() => {
     fetchTasks();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchTasks]);
 
   useEffect(() => {
@@ -178,7 +179,7 @@ export default function Board({ section, projectTags, allSections, projectMember
     } catch (err: unknown) {
       const axErr = err as { response?: { data?: { code?: string } } };
       if (axErr?.response?.data?.code === 'TASK_BLOCKED') {
-        alert(t('dependencies.cannotAdvance'));
+        showNotice(t('dependencies.cannotAdvance'));
       }
       fetchTasks();
     }
@@ -207,7 +208,7 @@ export default function Board({ section, projectTags, allSections, projectMember
     } catch (err: unknown) {
       const axErr = err as { response?: { data?: { code?: string } } };
       if (axErr?.response?.data?.code === 'TASK_BLOCKED') {
-        alert(t('dependencies.cannotAdvance'));
+        showNotice(t('dependencies.cannotAdvance'));
       }
       fetchTasks();
     }
@@ -247,6 +248,14 @@ export default function Board({ section, projectTags, allSections, projectMember
   const deleteTask = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
+
+    // Flush a previous pending deletion instead of dropping it: clearing the
+    // timer must not leave a task removed from the UI but alive in the DB.
+    if (deleteTaskTimerRef.current && pendingDeleteTask) {
+      clearTimeout(deleteTaskTimerRef.current);
+      void api.delete(`/tasks/${pendingDeleteTask.id}`).catch(() => { /* ignore */ });
+    }
+
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     setSelectedTask(null);
     if (deleteTaskTimerRef.current) clearTimeout(deleteTaskTimerRef.current);
@@ -264,6 +273,11 @@ export default function Board({ section, projectTags, allSections, projectMember
     setPendingDeleteTask(null);
   };
 
+  const showNotice = (message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(null), 4000);
+  };
+
   const activeTasks = tasks.filter(t => !t.archived);
   const doneCount = activeTasks.filter(t => t.status === 'DONE').length;
   const totalCount = activeTasks.length;
@@ -273,69 +287,30 @@ export default function Board({ section, projectTags, allSections, projectMember
 
   return (
     <div className="board-wrapper">
-      <div className="board-header">
-        <div className="board-toolbar" style={{ '--sec': section.color } as React.CSSProperties}>
-          <span className="board-section-color-bar" />
-          <h2 className="board-section-title" style={{ color: section.color }}>{section.name}</h2>
-          <button className="btn-primary" style={{ background: section.color }} onClick={() => handleOpenCreate('TODO')}>
-            + {t('tasks.create')}
-          </button>
-          <label className="show-archived-toggle">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
-            />
-            {t('tasks.showArchived')}
-          </label>
-          <div className="sort-selector">
-            <span className="sort-selector-label">{t('tasks.sort.label')}:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'recent' | 'oldest' | 'position')}
-            >
-              <option value="recent">{t('tasks.sort.recent')}</option>
-              <option value="oldest">{t('tasks.sort.oldest')}</option>
-              <option value="position">{t('tasks.sort.position')}</option>
-            </select>
-          </div>
-        </div>
-
-        <FilterBar
-          filters={filters}
-          onChange={setFilters}
-          projectMembers={projectMembers || []}
-          projectTags={projectTags}
-        />
-
-        {isMobileView && (
-          <div className="board-mobile-status-tabs" role="tablist" aria-label={t('tasks.statusTitle')}>
-            {COLUMNS.map((status) => {
-              const count = tasksForColumn(status).length;
-              const active = mobileStatusTab === status;
-              return (
-                <button
-                  key={status}
-                  className={`board-mobile-status-tab${active ? ' active' : ''}`}
-                  data-status={status}
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setMobileStatusTab(status)}
-                >
-                  <span className="board-mobile-status-tab-label">{t(`tasks.status.${status}`)}</span>
-                  <span className="board-mobile-status-tab-count">{count}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {totalCount > 0 && (
-          <div className="board-progress-bar">
-            <div className="board-progress-fill" style={{ width: `${progress}%`, background: section.color }} />
-          </div>
-        )}
-      </div>
+      {notice && <div className="board-notice" role="status">{notice}</div>}
+      <BoardHeader
+        section={section}
+        filters={filters}
+        onFiltersChange={setFilters}
+        projectMembers={projectMembers}
+        projectTags={projectTags}
+        showArchived={showArchived}
+        onShowArchivedChange={setShowArchived}
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        isMobileView={isMobileView}
+        mobileStatusTab={mobileStatusTab}
+        onMobileStatusChange={setMobileStatusTab}
+        taskCounts={{
+          TODO: tasksForColumn('TODO').length,
+          IN_PROGRESS: tasksForColumn('IN_PROGRESS').length,
+          IN_REVIEW: tasksForColumn('IN_REVIEW').length,
+          DONE: tasksForColumn('DONE').length,
+        }}
+        totalCount={totalCount}
+        progress={progress}
+        onCreate={() => handleOpenCreate('TODO')}
+      />
 
       {isMobileView ? (
         <div className="kanban-board mobile-single-column">
@@ -419,7 +394,7 @@ export default function Board({ section, projectTags, allSections, projectMember
 
       {pendingDeleteTask && (
         <UndoToast
-          message={`Tarea "${pendingDeleteTask.title}" eliminada`}
+          message={t('tasks.deleteToast', { title: pendingDeleteTask.title })}
           onUndo={undoDeleteTask}
           onDismiss={() => setPendingDeleteTask(null)}
         />

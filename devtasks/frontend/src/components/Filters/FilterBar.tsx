@@ -194,26 +194,3 @@ export default function FilterBar({ filters, onChange, projectMembers, projectTa
   );
 }
 
-export function getDueDateRange(preset: DuePreset): { from: string | null; to: string | null } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  switch (preset) {
-    case 'overdue': {
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      return { from: null, to: yesterday.toISOString().split('T')[0] };
-    }
-    case 'today':
-      return { from: today.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
-    case 'week': {
-      const endOfWeek = new Date(today);
-      const dayOfWeek = today.getDay();
-      const daysUntilEnd = 7 - dayOfWeek;
-      endOfWeek.setDate(endOfWeek.getDate() + daysUntilEnd);
-      return { from: today.toISOString().split('T')[0], to: endOfWeek.toISOString().split('T')[0] };
-    }
-    default:
-      return { from: null, to: null };
-  }
-}

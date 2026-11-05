@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
+import { getApiErrorMessage } from '../utils/errors';
 
 interface ApiKeyEntry {
   id?: string;
@@ -75,8 +76,8 @@ export default function Settings() {
       });
       setFormKeys(prev => ({ ...prev, [provider]: '' }));
       setSuccess(t('settings.keySaved'));
-    } catch (err: any) {
-      setError(err?.response?.data?.error || t('settings.errorSave'));
+    } catch (err) {
+      setError(getApiErrorMessage(err, t('settings.errorSave')));
     } finally {
       setSaving(prev => ({ ...prev, [provider]: false }));
     }
@@ -89,8 +90,8 @@ export default function Settings() {
       await api.delete(`/user/ai-keys/${provider}`);
       setSavedKeys(prev => prev.filter(k => k.provider !== provider));
       setSuccess(t('settings.keyDeleted'));
-    } catch (err: any) {
-      setError(err?.response?.data?.error || t('settings.errorDelete'));
+    } catch (err) {
+      setError(getApiErrorMessage(err, t('settings.errorDelete')));
     }
   };
 

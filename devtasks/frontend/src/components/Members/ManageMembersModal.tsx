@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
+import { getApiErrorMessage } from '../../utils/errors';
 import type { AccessType, Project, ProjectMember, Section, SectionMember } from '../../types';
 
 type Tab = 'project' | 'section';
@@ -83,8 +84,8 @@ export default function ManageMembersModal({
       setProjectMembers(updated);
       onProjectMembersChange?.(updated);
       setInviteEmail('');
-    } catch (err: any) {
-      setInviteError(err?.response?.data?.error || t('members.inviteError'));
+    } catch (err) {
+      setInviteError(getApiErrorMessage(err, t('members.inviteError')));
     } finally {
       setInviting(false);
     }
@@ -120,8 +121,8 @@ export default function ManageMembersModal({
       });
       setSectionMembers((prev) => [...prev, res.data]);
       setSectionInviteEmail('');
-    } catch (err: any) {
-      setSectionInviteError(err?.response?.data?.error || t('members.inviteError'));
+    } catch (err) {
+      setSectionInviteError(getApiErrorMessage(err, t('members.inviteError')));
     } finally {
       setSectionInviting(false);
     }

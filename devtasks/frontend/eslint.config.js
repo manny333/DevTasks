@@ -20,4 +20,11 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    files: ['src/context/**/*.tsx'],
+    rules: {
+      // Context modules intentionally export both the provider and its hook.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

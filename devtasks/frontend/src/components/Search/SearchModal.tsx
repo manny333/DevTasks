@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
@@ -40,10 +40,13 @@ export default function SearchModal({ onClose }: SearchModalProps) {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(0);
 
-  const allItems: Array<{ type: 'project' | 'task'; item: ProjectResult | TaskResult }> = [
-    ...results.projects.map((p) => ({ type: 'project' as const, item: p })),
-    ...results.tasks.map((t) => ({ type: 'task' as const, item: t })),
-  ];
+  const allItems = useMemo<Array<{ type: 'project' | 'task'; item: ProjectResult | TaskResult }>>(
+    () => [
+      ...results.projects.map((p) => ({ type: 'project' as const, item: p })),
+      ...results.tasks.map((t) => ({ type: 'task' as const, item: t })),
+    ],
+    [results]
+  );
 
   // Autofocus
   useEffect(() => {

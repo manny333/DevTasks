@@ -43,7 +43,6 @@ export default function ListView({ sections, onTaskClick }: ListViewProps) {
       }
     }
     return result;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sections, showArchived]);
 
   const sorted = useMemo(() => {

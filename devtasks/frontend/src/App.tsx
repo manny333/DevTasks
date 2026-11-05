@@ -15,6 +15,7 @@ import './i18n';
 import './styles/globals.css';
 import './styles/theme.css';
 import './styles/kanban.css';
+import './styles/notices.css';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 

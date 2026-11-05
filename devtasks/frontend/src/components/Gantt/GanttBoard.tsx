@@ -194,7 +194,7 @@ export default function GanttBoard({ sections, onTaskClick }: GanttBoardProps) {
       if (group) group.tasks.push(gt);
     }
     return [...map.values()].filter(g => g.tasks.length > 0 || (g.section.tasks || []).some(t => !t.archived && !t.dueDate));
-  }, [sections, allTasks]);
+  }, [sections, displayTasks]);
 
   const dayColumns: Date[] = [];
   for (let i = 0; i <= totalDays; i++) {

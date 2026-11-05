@@ -11,6 +11,18 @@
   "projects": {
     "title": "Mis Proyectos",
     "subtitle": "Gestiona y organiza tu flujo de trabajo de desarrollo",
+    "greeting": "Hola, {{name}}",
+    "workspace": "Espacio de trabajo",
+    "noDescription": "Sin descripción",
+    "results": "{{count}} proyectos",
+    "results_one": "{{count}} proyecto",
+    "results_other": "{{count}} proyectos",
+    "sections_one": "{{count}} sección",
+    "sections_other": "{{count}} secciones",
+    "members_one": "{{count}} miembro",
+    "members_other": "{{count}} miembros",
+    "createHint": "Empieza desde cero",
+    "noResults": "Ningún proyecto coincide con tu búsqueda.",
     "create": "Nuevo Proyecto",
     "name": "Nombre del proyecto",
     "namePlaceholder": "Nombre del proyecto...",
@@ -54,10 +66,12 @@
     "unarchive": "Desarchivar sección",
     "showArchived": "Mostrar archivadas",
     "hideArchived": "Ocultar archivadas",
-    "noSections": "Sin secciones aún. Crea una para comenzar."
+    "noSections": "Sin secciones aún. Crea una para comenzar.",
+    "deleteToast": "Sección \"{{title}}\" eliminada"
   },
   "tasks": {
     "create": "Nueva Tarea",
+    "deleteToast": "Tarea \"{{title}}\" eliminada",
     "title": "Título de la tarea",
     "description": "Descripción (soporta markdown)",
     "status": {
@@ -155,7 +169,9 @@
     "close": "Cerrar",
     "loading": "Cargando...",
     "search": "Buscar tareas y proyectos...",
-    "noResults": "Sin resultados"
+    "noResults": "Sin resultados",
+    "projectNotFound": "Proyecto no encontrado",
+    "notice": "Aviso"
   },
   "shortcuts": {
     "newTask": "Nueva tarea",

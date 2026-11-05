@@ -46,6 +46,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Load on mount / user change
   useEffect(() => {
     if (!user) {
+      // Clearing another user's inbox is a deliberate reset, not derived state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNotifications([]);
       setUnreadCount(0);
       return;
@@ -54,33 +56,60 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     loadAll().finally(() => setLoading(false));
   }, [user, loadAll]);
 
-  // SSE connection — replaces polling
+  // SSE connection — authenticated with a single-use ticket, never the JWT in the URL.
   useEffect(() => {
     if (!user) return;
 
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    let cancelled = false;
+    let source: EventSource | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryDelay = 2000;
 
-    const url = `${API_BASE}/notifications/stream?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(url);
-
-    es.onmessage = (event) => {
+    const connect = async () => {
+      if (cancelled) return;
       try {
-        const notification: Notification = JSON.parse(event.data);
-        setNotifications((prev) => [notification, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-        setNewArrived(true);
+        const res = await api.post<{ ticket: string }>('/notifications/stream-ticket');
+        if (cancelled) return;
+
+        source = new EventSource(
+          `${API_BASE}/notifications/stream?ticket=${encodeURIComponent(res.data.ticket)}`
+        );
+
+        source.onopen = () => {
+          retryDelay = 2000;
+        };
+
+        source.onmessage = (event) => {
+          try {
+            const notification: Notification = JSON.parse(event.data);
+            setNotifications((prev) => [notification, ...prev]);
+            setUnreadCount((prev) => prev + 1);
+            setNewArrived(true);
+          } catch {
+            // Ignore malformed events
+          }
+        };
+
+        source.onerror = () => {
+          source?.close();
+          source = null;
+          if (cancelled) return;
+          retryTimer = setTimeout(connect, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 30000);
+        };
       } catch {
-        // Ignore malformed events
+        if (cancelled) return;
+        retryTimer = setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 30000);
       }
     };
 
-    es.onerror = () => {
-      // EventSource auto-reconnects on error — no manual handling needed
-    };
+    void connect();
 
     return () => {
-      es.close();
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+      source?.close();
     };
   }, [user]);
 
