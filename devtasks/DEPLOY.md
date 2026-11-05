@@ -162,6 +162,7 @@ docker compose ps   # PostgreSQL debe estar Up (puerto 5433)
 | `CORS_ORIGIN` | `http://localhost:5173,http://localhost:5174` (solo dev; en prod no aplica por mismo origen) |
 | `TRUST_PROXY` | `1` (detrás de Cloudflare) |
 | `UPLOADS_SECRET` | secreto aleatorio para firmar URLs de adjuntos (si falta usa `JWT_SECRET`) |
+| `API_KEY_ENCRYPTION_SECRET` | secreto para cifrar las API keys de IA en BD; si falta usa `JWT_SECRET` |
 | `AI_ALLOWED_BASE_URLS` | opcional, solo si se usa un gateway propio de IA |
 
 ### 4.3 Build

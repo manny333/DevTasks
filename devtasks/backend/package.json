@@ -11,9 +11,11 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:roadmap": "tsx prisma/seed-roadmap.ts",
     "db:studio": "prisma studio",
+    "db:encrypt-keys": "node scripts/encrypt-existing-keys.mjs",
     "test": "node scripts/authz-coverage.mjs",
     "test:http": "node scripts/authz-runtime-offline.mjs",
     "test:runtime": "node scripts/authz-runtime.mjs",
+    "test:crypto": "node scripts/crypto-check.mjs",
     "smoke:runtime": "node scripts/smoke-runtime.mjs",
     "typecheck": "tsc --noEmit"
   },

@@ -139,6 +139,7 @@
 | Área | Cambio |
 |---|---|
 | **Autorización** | Guards `requireProjectAccess` / `requireSectionAccess` / `requireTaskAccess` en todos los handlers de datos; `getProjectAccess` ya no agrega acceso de sección; `GET /projects/:slug` filtra secciones/tareas según el scope |
+| **Secretos** | API keys de IA cifradas con AES-256-GCM (AAD ligado a usuario+proveedor), upgrade perezoso de claves legacy y test de criptografía en CI |
 | **Adjuntos** | Extensión derivada del MIME verificado por magic bytes; `/uploads` deja de ser estático y usa URLs HMAC con expiración |
 | **SSE** | Ticket de un solo uso (60 s) para el stream; el JWT ya no viaja en la URL; reconexión con backoff |
 | **IA** | Allowlist de `baseUrl` contra hosts oficiales, timeout 60 s (300 s en streaming), rate limit 20 req/5 min, `apply` transaccional y `existingSectionId` validado |

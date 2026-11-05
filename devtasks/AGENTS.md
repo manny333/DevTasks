@@ -116,6 +116,6 @@ devtasks/
 - Adjuntos: MIME verificado por magic bytes y URLs firmadas con expiración (HMAC). No existe carpeta `/uploads` pública
 - SSE: ticket de un solo uso de 60 s (`POST /api/notifications/stream-ticket`); el JWT no viaja en la URL
 - IA: `baseUrl` restringido a hosts oficiales o `AI_ALLOWED_BASE_URLS`, timeout de 60 s y rate limit por usuario
-- API keys de IA por usuario en `UserApiKey` (texto plano; cifrado en reposo pendiente)
+- API keys de IA por usuario en `UserApiKey`, cifradas con AES-256-GCM y AAD ligado a usuario+proveedor (`API_KEY_ENCRYPTION_SECRET`)
 - `.env` NUNCA se commitea (excluido en `.gitignore`); hay `.env.example` en backend y frontend
 - CORS configurado con orígenes específicos en producción

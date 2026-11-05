@@ -52,7 +52,7 @@ Datos de prueba: `cd backend && npm run db:seed`.
 - **SSE:** el stream de notificaciones usa un ticket de un solo uso (60 s), no el JWT en la query.
 - **IA:** `baseUrl` validado contra hosts oficiales (o `AI_ALLOWED_BASE_URLS`), timeouts y rate limit por usuario.
 - **Secretos:** `.env` está en `.gitignore`; las API keys de IA se guardan por usuario en la BD
-  (cifrado en reposo pendiente, ver P2 del plan).
+  cifradas con AES-256-GCM (clave en `API_KEY_ENCRYPTION_SECRET`).
 
 ## Estructura
 

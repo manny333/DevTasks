@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { saveUserApiKey } from '../lib/userApiKeys';
 
 const router = Router();
 router.use(authMiddleware);
@@ -28,6 +29,10 @@ router.put('/ai-keys', async (req: AuthRequest, res: Response): Promise<void> =>
       res.status(400).json({ error: 'provider and apiKey are required' });
       return;
     }
+    if (typeof provider !== 'string' || typeof apiKey !== 'string') {
+      res.status(400).json({ error: 'provider and apiKey must be strings' });
+      return;
+    }
 
     const validProviders = ['deepseek', 'openai', 'anthropic', 'gemini'];
     if (!validProviders.includes(provider)) {
@@ -35,11 +40,8 @@ router.put('/ai-keys', async (req: AuthRequest, res: Response): Promise<void> =>
       return;
     }
 
-    const key = await prisma.userApiKey.upsert({
-      where: { userId_provider: { userId: req.userId!, provider } },
-      update: { apiKey, label: label || null, isActive: true },
-      create: { provider, apiKey, label: label || null, userId: req.userId! },
-    });
+    // Stored encrypted with AES-256-GCM; plaintext never touches the database.
+    const key = await saveUserApiKey(req.userId!, provider, apiKey, label || null);
 
     res.json({
       id: key.id,

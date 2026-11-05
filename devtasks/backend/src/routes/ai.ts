@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { createProvider, getAvailableProviders } from '../lib/ai/factory';
 import { ensureProjectAccess } from '../lib/access';
+import { getDecryptedUserApiKey } from '../lib/userApiKeys';
 import { rateLimit } from '../lib/rateLimit';
 import { buildSystemPrompt, buildUserPrompt } from '../lib/ai/prompts';
 import type { AIProvider, AIImportPreview, AIImportSection } from '../lib/ai/types';
@@ -160,10 +161,7 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
 
     let resolvedApiKey = apiKey;
     if (!resolvedApiKey) {
-      const userKey = await prisma.userApiKey.findUnique({
-        where: { userId_provider: { userId: req.userId!, provider } },
-      });
-      if (userKey) resolvedApiKey = userKey.apiKey;
+      resolvedApiKey = await getDecryptedUserApiKey(req.userId!, provider);
     }
     if (!resolvedApiKey) {
       resolvedApiKey = process.env[`AI_${provider.toUpperCase()}_API_KEY`];
@@ -251,10 +249,7 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
 
     let resolvedApiKey = apiKey;
     if (!resolvedApiKey) {
-      const userKey = await prisma.userApiKey.findUnique({
-        where: { userId_provider: { userId: req.userId!, provider } },
-      });
-      if (userKey) resolvedApiKey = userKey.apiKey;
+      resolvedApiKey = await getDecryptedUserApiKey(req.userId!, provider);
     }
     if (!resolvedApiKey) {
       resolvedApiKey = process.env[`AI_${provider.toUpperCase()}_API_KEY`];

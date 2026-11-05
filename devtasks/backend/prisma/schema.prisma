@@ -331,7 +331,7 @@ model ActivityLog {
 model UserApiKey {
   id        String   @id @default(cuid())
   provider  String
-  apiKey    String
+  apiKey    String   // AES-256-GCM envelope: v1.<iv>.<tag>.<ciphertext>
   label     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
