@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "kanvy": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["devtasks/mcp-server/build/index.js"],
+      "env": {
+        "KANVY_API_URL": "http://localhost:5001/api",
+        "KANVY_TOKEN": "${KANVY_TOKEN}",
+        "KANVY_ALLOW_WRITES": "1"
+      }
+    }
+  }
+}

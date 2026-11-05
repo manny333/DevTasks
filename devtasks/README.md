@@ -60,6 +60,7 @@ Datos de prueba: `cd backend && npm run db:seed`.
 devtasks/
 ├── backend/   API Express, Prisma (17 modelos), migraciones, seeds
 ├── frontend/  SPA React, contextos, vistas Kanban/Calendario/Lista/Gantt
+├── mcp-server/ Servidor MCP portable (stdio/HTTP) para agentes
 └── shared/    Contrato de tipos y chequeo de drift
 ```
 
@@ -69,3 +70,4 @@ devtasks/
 - [`DEPLOY.md`](DEPLOY.md) — despliegue con Cloudflare Tunnel
 - [`MEMORY.md`](MEMORY.md) — changelog funcional
 - [`AI_INTEGRATION_PLAN.md`](AI_INTEGRATION_PLAN.md) — diseño de la importación con IA
+- [`mcp-server/README.md`](mcp-server/README.md) — servidor MCP para Claude Code, Cursor, VS Code, Codex y otros

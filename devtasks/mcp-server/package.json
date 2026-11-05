@@ -1,0 +1,35 @@
+{
+  "name": "kanvy-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Kanvy: projects, tasks and comments for any MCP-compatible agent.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "kanvy-mcp": "./build/index.js"
+  },
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node build/index.js",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "test:e2e": "npm run build && node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "^2.1.2",
+    "@modelcontextprotocol/server": "^2.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@types/node": "^24.12.0",
+    "typescript": "~5.9.3"
+  }
+}
