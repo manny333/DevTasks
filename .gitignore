@@ -1,0 +1,6 @@
+# Repo-root artifacts (devtasks has its own .gitignore)
+.vite/
+node_modules/
+dist/
+.env
+uploads/
