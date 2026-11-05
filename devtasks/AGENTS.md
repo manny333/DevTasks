@@ -32,6 +32,7 @@ devtasks/
 │   ├── src/i18n/     # en.json, es.json (~200 claves)
 │   └── src/styles/   # globals.css, theme.css, kanban.css
 ├── mcp-server/       # Servidor MCP portable (stdio/HTTP) para agentes
+├── dsh-kanvy/        # Plugin nativo de DeepSeek Harness (tools Kanvy)
 ├── shared/           # Contrato de tipos + check de drift (CI)
 └── docker-compose.yml # PostgreSQL 15, puerto 5433
 ```
@@ -60,6 +61,10 @@ devtasks/
 - `npm run build` — Compilar TypeScript
 - `npm test` — Tests unitarios (config, cliente, tools)
 - `npm run test:e2e` — Cliente MCP real por stdio + smoke HTTP
+
+### Plugin DSH (directorio: `dsh-kanvy/`)
+- `npm run build` — Compilar TypeScript
+- `npm test` — Config, cliente, formatters, tools y wiring del plugin
 
 ## Convenciones de Código
 

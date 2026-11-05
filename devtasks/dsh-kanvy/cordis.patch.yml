@@ -1,0 +1,8 @@
+# dsh-kanvy bundle: mount the native Kanvy tools in a profile.
+# Install with:
+#   dsh plugin --profile desktop add "C:/path/to/devtasks/dsh-kanvy"
+# Then add the bundle name to dsh.profile.bundles and configure the token in the
+# profile's cordis.patch.yml.
+- insert:
+    - id: kanvy
+      name: dsh-kanvy
