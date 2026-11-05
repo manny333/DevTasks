@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import ExcelJS from 'exceljs';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { requireProjectAccess } from '../lib/access';
 
 const router = Router();
 router.use(authMiddleware);
@@ -61,6 +62,8 @@ const subtitleStyle = {
 // GET /api/projects/:projectId/export
 router.get('/:projectId/export', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireProjectAccess(req, res, { param: 'projectId', minEdit: false })) return;
+
     const project = await prisma.project.findUnique({
       where: { id: req.params.projectId as string },
       include: {

@@ -1,27 +1,43 @@
 import { Router, Response, Request } from 'express';
-import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { addClient, removeClient } from '../lib/sseManager';
 
 const router = Router();
 
-// ─── SSE stream (auth via ?token= query param) ──────────────
+// ─── SSE one-time tickets ───────────────────────────────────
+// EventSource cannot send an Authorization header, so the stream is
+// authenticated with a short-lived, single-use ticket instead of putting the
+// 7-day JWT in the query string (where it would end up in proxy logs).
 
-// GET /api/notifications/stream?token=<jwt>
-router.get('/stream', (req: Request, res: Response): void => {
-  const token = req.query.token as string | undefined;
-  if (!token) {
-    res.status(401).json({ error: 'Token required' });
-    return;
+const TICKET_TTL_MS = 60_000;
+const tickets = new Map<string, { userId: string; expiresAt: number }>();
+
+function issueTicket(userId: string): string {
+  const now = Date.now();
+  for (const [key, value] of tickets) {
+    if (value.expiresAt < now) tickets.delete(key);
   }
+  const ticket = crypto.randomBytes(32).toString('base64url');
+  tickets.set(ticket, { userId, expiresAt: now + TICKET_TTL_MS });
+  return ticket;
+}
 
-  let userId: string;
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-    userId = payload.userId;
-  } catch {
-    res.status(401).json({ error: 'Invalid or expired token' });
+function consumeTicket(ticket: string | undefined): string | null {
+  if (!ticket) return null;
+  const entry = tickets.get(ticket);
+  if (!entry) return null;
+  tickets.delete(ticket);
+  if (entry.expiresAt < Date.now()) return null;
+  return entry.userId;
+}
+
+// GET /api/notifications/stream?ticket=<one-time-ticket>
+router.get('/stream', (req: Request, res: Response): void => {
+  const userId = consumeTicket(req.query.ticket as string | undefined);
+  if (!userId) {
+    res.status(401).json({ error: 'A valid ticket is required' });
     return;
   }
 
@@ -53,6 +69,11 @@ router.get('/stream', (req: Request, res: Response): void => {
 });
 
 router.use(authMiddleware);
+
+// POST /api/notifications/stream-ticket — exchange a JWT for a one-time SSE ticket
+router.post('/stream-ticket', (req: AuthRequest, res: Response): void => {
+  res.json({ ticket: issueTicket(req.userId!) });
+});
 
 // GET /api/notifications — list notifications for current user
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {

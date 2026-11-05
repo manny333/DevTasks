@@ -3,7 +3,8 @@ import multer from 'multer';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { requireTaskAccess } from '../lib/access';
-import { storage } from '../lib/storage';
+import { storage, isAllowedMime, matchesMagicBytes } from '../lib/storage';
+import { logTaskEvent } from '../lib/activity';
 
 const router = Router();
 router.use(authMiddleware);
@@ -13,8 +14,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
   fileFilter: (_req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-    if (allowed.includes(file.mimetype)) cb(null, true);
+    if (isAllowedMime(file.mimetype)) cb(null, true);
     else cb(new Error('Only images (JPEG, PNG, GIF, WEBP) and PDFs are allowed'));
   },
 });
@@ -25,6 +25,13 @@ router.post('/:id/attachments', upload.single('file'), async (req: AuthRequest, 
     if (!await requireTaskAccess(req, res)) return;
     if (!req.file) {
       res.status(400).json({ error: 'No file provided' });
+      return;
+    }
+
+    // The declared Content-Type is client-controlled: verify the real bytes
+    // before storing, so a renamed HTML/SVG cannot be served as markup later.
+    if (!matchesMagicBytes(req.file.buffer, req.file.mimetype)) {
+      res.status(400).json({ error: 'File content does not match the declared type (JPEG, PNG, GIF, WEBP or PDF)' });
       return;
     }
 
@@ -40,12 +47,18 @@ router.post('/:id/attachments', upload.single('file'), async (req: AuthRequest, 
       },
     });
 
+    void logTaskEvent({
+      taskId: req.params.id as string,
+      actorId: req.userId!,
+      action: 'ATTACHMENT_UPLOADED',
+      details: { filename: attachment.filename },
+    });
+
     res.status(201).json({
       ...attachment,
       url: storage.getUrl(storageKey),
     });
-  } catch (error: unknown) {
-    if (error instanceof multer.MulterError || (error instanceof Error && error.message.includes('Only'))) {
+  } catch (error: unknown) {    if (error instanceof multer.MulterError || (error instanceof Error && error.message.includes('Only'))) {
       res.status(400).json({ error: (error as Error).message });
       return;
     }
@@ -87,6 +100,13 @@ router.delete('/:id/attachments/:attachmentId', async (req: AuthRequest, res: Re
 
     await storage.delete(attachment.storageKey);
     await prisma.taskAttachment.delete({ where: { id: attachment.id } });
+
+    void logTaskEvent({
+      taskId: req.params.id as string,
+      actorId: req.userId!,
+      action: 'ATTACHMENT_DELETED',
+      details: { filename: attachment.filename },
+    });
 
     res.status(204).send();
   } catch (error) {

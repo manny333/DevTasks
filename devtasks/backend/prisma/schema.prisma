@@ -113,6 +113,7 @@ model ProjectMember {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+  @@index([userId])
 }
 
 model Section {
@@ -144,6 +145,7 @@ model SectionMember {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([sectionId, userId])
+  @@index([userId])
 }
 
 model Task {
@@ -169,6 +171,8 @@ model Task {
   activities  ActivityLog[]     @relation("TaskActivities")
   blockedBy   TaskDependency[]  @relation("TaskBlockedBy")
   blocks      TaskDependency[]  @relation("TaskBlocks")
+
+  @@index([sectionId])
 }
 
 model Subtask {
@@ -181,6 +185,8 @@ model Subtask {
 
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }
 
 model TaskDependency {
@@ -208,6 +214,8 @@ model TaskAttachment {
 
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }
 
 model TaskAssignee {
@@ -220,6 +228,7 @@ model TaskAssignee {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([taskId, userId])
+  @@index([userId])
 }
 
 model Comment {
@@ -232,6 +241,8 @@ model Comment {
 
   authorId String
   author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }
 
 model Tag {
@@ -245,6 +256,7 @@ model Tag {
   tasks TaskTag[]
 
   @@unique([projectId, name])
+  @@index([projectId])
 }
 
 model TaskTag {
@@ -269,6 +281,8 @@ model TaskTemplate {
 
   sectionId String?
   section   Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
 }
 
 model Notification {
@@ -288,6 +302,8 @@ model Notification {
   projectId   String?
   projectName String?
   meta        Json?    // e.g. { newStatus: "DONE" } for status changes
+
+  @@index([userId])
 }
 
 model ActivityLog {
@@ -295,7 +311,7 @@ model ActivityLog {
   action      ActivityAction
   createdAt   DateTime       @default(now())
 
-  taskId      String
+  taskId      String?
   taskTitle   String
   projectId   String
   sectionId   String?
@@ -304,11 +320,12 @@ model ActivityLog {
   actorName   String
   details     Json?
 
-  task  Task @relation("TaskActivities", fields: [taskId], references: [id], onDelete: Cascade)
+  task  Task? @relation("TaskActivities", fields: [taskId], references: [id], onDelete: SetNull)
   actor User @relation("UserActivities", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@index([projectId])
+  @@index([actorId])
 }
 
 model UserApiKey {

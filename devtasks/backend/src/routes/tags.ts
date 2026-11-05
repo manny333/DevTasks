@@ -1,13 +1,24 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { ensureProjectAccess } from '../lib/access';
 
 const router = Router();
 router.use(authMiddleware);
 
+async function getTagProjectId(tagId: string): Promise<string | null> {
+  const tag = await prisma.tag.findUnique({
+    where: { id: tagId },
+    select: { projectId: true },
+  });
+  return tag?.projectId ?? null;
+}
+
 // POST /api/projects/:projectId/tags — create tag
 router.post('/:projectId/tags', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await ensureProjectAccess(req.userId!, req.params.projectId as string, res, true)) return;
+
     const { name, color } = req.body;
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       res.status(400).json({ error: 'Name is required' });
@@ -35,6 +46,8 @@ router.post('/:projectId/tags', async (req: AuthRequest, res: Response): Promise
 // GET /api/projects/:projectId/tags — list tags
 router.get('/:projectId/tags', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await ensureProjectAccess(req.userId!, req.params.projectId as string, res, false)) return;
+
     const tags = await prisma.tag.findMany({
       where: { projectId: req.params.projectId as string },
       orderBy: { name: 'asc' },
@@ -49,6 +62,13 @@ router.get('/:projectId/tags', async (req: AuthRequest, res: Response): Promise<
 // PATCH /api/tags/:id — update tag
 router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const projectId = await getTagProjectId(req.params.id as string);
+    if (!projectId) {
+      res.status(404).json({ error: 'Tag not found' });
+      return;
+    }
+    if (!await ensureProjectAccess(req.userId!, projectId, res, true)) return;
+
     const { name, color } = req.body;
     const updated = await prisma.tag.update({
       where: { id: req.params.id as string },
@@ -67,6 +87,13 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 // DELETE /api/tags/:id — delete tag
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const projectId = await getTagProjectId(req.params.id as string);
+    if (!projectId) {
+      res.status(404).json({ error: 'Tag not found' });
+      return;
+    }
+    if (!await ensureProjectAccess(req.userId!, projectId, res, true)) return;
+
     await prisma.tag.delete({ where: { id: req.params.id as string } });
     res.json({ success: true });
   } catch (error) {
@@ -76,4 +103,3 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
 });
 
 export default router;
-

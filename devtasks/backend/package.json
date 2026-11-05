@@ -10,7 +10,12 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:roadmap": "tsx prisma/seed-roadmap.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test": "node scripts/authz-coverage.mjs",
+    "test:http": "node scripts/authz-runtime-offline.mjs",
+    "test:runtime": "node scripts/authz-runtime.mjs",
+    "smoke:runtime": "node scripts/smoke-runtime.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

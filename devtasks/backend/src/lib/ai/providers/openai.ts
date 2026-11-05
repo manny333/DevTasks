@@ -17,6 +17,7 @@ export class OpenAIProvider implements AIProvider {
         max_tokens: options?.maxTokens ?? 4096,
         response_format: options?.responseFormat === 'json_object' ? { type: 'json_object' } : undefined,
       }),
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!res.ok) {
@@ -53,6 +54,7 @@ export class OpenAIProvider implements AIProvider {
         max_tokens: options?.maxTokens ?? 4096,
         stream: true,
       }),
+      signal: AbortSignal.timeout(300_000),
     });
 
     if (!res.ok) {

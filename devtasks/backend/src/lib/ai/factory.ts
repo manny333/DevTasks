@@ -13,9 +13,56 @@ const PROVIDER_DEFAULTS: Record<ProviderId, { baseUrl: string; model: string; la
   gemini:    { baseUrl: 'https://generativelanguage.googleapis.com', model: 'gemini-2.0-flash', label: 'Gemini (Google)' },
 };
 
+/** Hosts the server may talk to when no explicit allowlist is configured. */
+const ALLOWED_HOSTS: Record<ProviderId, string[]> = {
+  deepseek: ['api.deepseek.com'],
+  openai: ['api.openai.com'],
+  anthropic: ['api.anthropic.com'],
+  gemini: ['generativelanguage.googleapis.com'],
+};
+
+/**
+ * Validates a base URL before it is used for a server-side fetch.
+ * This is the SSRF guard: a client-supplied `baseUrl` must resolve to a known
+ * provider host, or match `AI_ALLOWED_BASE_URLS` (comma-separated prefixes)
+ * when using a self-hosted gateway.
+ */
+function assertSafeBaseUrl(provider: string, baseUrl: string): string {
+  if (!baseUrl) throw new Error(`No baseUrl configured for provider "${provider}"`);
+
+  const allowlist = (process.env.AI_ALLOWED_BASE_URLS || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  if (allowlist.length > 0) {
+    const normalized = baseUrl.replace(/\/+$/, '');
+    const allowed = allowlist.some((entry) => {
+      const candidate = entry.replace(/\/+$/, '');
+      return normalized === candidate || normalized.startsWith(`${candidate}/`);
+    });
+    if (!allowed) throw new Error('baseUrl is not allowed by AI_ALLOWED_BASE_URLS');
+    return normalized;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new Error('Invalid baseUrl');
+  }
+  if (parsed.protocol !== 'https:') throw new Error('baseUrl must use https');
+  const hosts = ALLOWED_HOSTS[provider as ProviderId] ?? [];
+  if (!hosts.includes(parsed.hostname)) {
+    throw new Error(`${provider} provider does not allow baseUrl host ${parsed.hostname}`);
+  }
+  return baseUrl.replace(/\/+$/, '');
+}
+
 function buildConfig(provider: string, apiKey: string, baseUrl?: string): AIConfig {
   const def = PROVIDER_DEFAULTS[provider as ProviderId] || { baseUrl: '', model: '' };
-  const resolvedBaseUrl = baseUrl || process.env[`AI_${provider.toUpperCase()}_BASE_URL`] || def.baseUrl;
+  const rawBaseUrl = baseUrl || process.env[`AI_${provider.toUpperCase()}_BASE_URL`] || def.baseUrl;
+  const resolvedBaseUrl = assertSafeBaseUrl(provider, rawBaseUrl);
   const model = process.env[`AI_${provider.toUpperCase()}_MODEL`] || def.model;
   return { apiKey, baseUrl: resolvedBaseUrl, defaultModel: model };
 }
@@ -49,4 +96,3 @@ export function getAvailableProviders(userKeys?: { provider: string; label?: str
     };
   });
 }
-

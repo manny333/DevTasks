@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { getProjectScope, requireProjectAccess } from '../lib/access';
 
 const router = Router();
 router.use(authMiddleware);
@@ -167,6 +168,11 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 router.get('/:slug', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.userId!;
+    const rawTasksLimit = Number.parseInt(String(req.query.tasksLimit ?? ''), 10);
+    const tasksLimit = Number.isFinite(rawTasksLimit) && rawTasksLimit > 0
+      ? Math.min(rawTasksLimit, 1000)
+      : undefined;
+
     const project = await prisma.project.findUnique({
       where: { slug: req.params.slug as string },
       include: {
@@ -178,6 +184,7 @@ router.get('/:slug', async (req: AuthRequest, res: Response): Promise<void> => {
           orderBy: { position: 'asc' },
           include: {
             tasks: {
+              ...(tasksLimit ? { take: tasksLimit } : {}),
               orderBy: { position: 'asc' },
               include: {
                 tags: { include: { tag: true } },
@@ -197,13 +204,37 @@ router.get('/:slug', async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
-    const myAccess = await resolveMyAccess(project, userId);
-    if (!myAccess) {
+    const scope = await getProjectScope(userId, project.id);
+    if (!scope) {
       res.status(403).json({ error: 'Not a member of this project' });
       return;
     }
 
-    res.json({ ...project, myAccess });
+    // Section/task-level grants must not expose the whole project: filter the
+    // payload down to the sections and tasks the user can actually read.
+    let sections = project.sections;
+    let members = project.members;
+    if (!scope.all) {
+      const sectionIdSet = new Set(scope.sectionIds);
+      const taskIdSet = new Set(scope.taskIds);
+      sections = sections
+        .filter((section) =>
+          sectionIdSet.has(section.id) || section.tasks.some((task) => taskIdSet.has(task.id))
+        )
+        .map((section) =>
+          sectionIdSet.has(section.id)
+            ? section
+            : { ...section, tasks: section.tasks.filter((task) => taskIdSet.has(task.id)) }
+        );
+      members = [];
+    }
+
+    res.json({
+      ...project,
+      sections,
+      members,
+      myAccess: { level: scope.level, accessType: scope.accessType },
+    });
   } catch (error) {
     console.error('Get project error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -342,6 +373,8 @@ router.patch('/:id/members/:userId', async (req: AuthRequest, res: Response): Pr
 // GET /api/projects/:id/members — list members
 router.get('/:id/members', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireProjectAccess(req, res, { param: 'id', minEdit: false })) return;
+
     const members = await prisma.projectMember.findMany({
       where: { projectId: req.params.id as string },
       include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
@@ -368,6 +401,10 @@ router.delete('/:id/members/:userId', async (req: AuthRequest, res: Response): P
     }
     if (req.params.userId as string === req.userId) {
       res.status(400).json({ error: 'Cannot remove yourself' });
+      return;
+    }
+    if (req.params.userId as string === project.ownerId) {
+      res.status(400).json({ error: 'Cannot remove the project owner' });
       return;
     }
 

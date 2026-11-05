@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { getProjectScope } from '../lib/access';
 
 const router = Router();
 router.use(authMiddleware);
@@ -8,6 +9,12 @@ router.use(authMiddleware);
 // GET /api/projects/:projectId/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD
 router.get('/:projectId/calendar', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const scope = await getProjectScope(req.userId!, req.params.projectId as string);
+    if (!scope) {
+      res.status(403).json({ error: 'No access to this project' });
+      return;
+    }
+
     const from = req.query.from as string;
     const to = req.query.to as string;
 
@@ -25,12 +32,21 @@ router.get('/:projectId/calendar', async (req: AuthRequest, res: Response): Prom
       return;
     }
 
+    const where: Record<string, unknown> = {
+      section: { projectId: req.params.projectId as string },
+      dueDate: { gte: fromDate, lte: toDate },
+      archived: false,
+    };
+    if (!scope.all) {
+      where.OR = [
+        { sectionId: { in: scope.sectionIds } },
+        { id: { in: scope.taskIds } },
+      ];
+    }
+
     const tasks = await prisma.task.findMany({
-      where: {
-        section: { projectId: req.params.projectId as string },
-        dueDate: { gte: fromDate, lte: toDate },
-        archived: false,
-      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      where: where as any,
       include: {
         tags: { include: { tag: true } },
         assignees: { include: { user: { select: { id: true, name: true, email: true, avatar: true } } } },

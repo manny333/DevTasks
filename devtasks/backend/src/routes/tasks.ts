@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
-import { requireTaskAccess, getSectionAccess, canEdit } from '../lib/access';
+import { requireTaskAccess, ensureSectionAccess } from '../lib/access';
 import { notify } from '../lib/notify';
-import { logActivity } from '../lib/activity';
+import { logActivity, logTaskEvent } from '../lib/activity';
 
 const router = Router();
 router.use(authMiddleware);
@@ -64,6 +64,13 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
         _count: { select: { comments: true, subtasks: true } },
       },
     });
+    void logTaskEvent({
+      taskId: req.params.id as string,
+      actorId: req.userId!,
+      action: 'TASK_UPDATED',
+      details: { fields: Object.keys(req.body ?? {}) },
+    });
+
     res.json(updated);
   } catch (error) {
     console.error('Update task error:', error);
@@ -110,27 +117,30 @@ router.patch('/:id/move', async (req: AuthRequest, res: Response): Promise<void>
       }
     }
 
-    // Shift positions of other tasks in the target column
-    await prisma.task.updateMany({
-      where: {
-        sectionId: task.sectionId,
-        status,
-        position: { gte: position },
-        id: { not: task.id },
-      },
-      data: { position: { increment: 1 } },
-    });
+    // Shift positions and apply the move atomically so concurrent drags cannot
+    // leave duplicate or gapped positions behind.
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.task.updateMany({
+        where: {
+          sectionId: task.sectionId,
+          status,
+          position: { gte: position },
+          id: { not: task.id },
+        },
+        data: { position: { increment: 1 } },
+      });
 
-    const updated = await prisma.task.update({
-      where: { id: req.params.id as string },
-      data: { status, position },
-      include: {
-        tags: { include: { tag: true } },
-        subtasks: { orderBy: { position: 'asc' } },
-        blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
-        blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
-        _count: { select: { comments: true, subtasks: true } },
-      },
+      return tx.task.update({
+        where: { id: req.params.id as string },
+        data: { status, position },
+        include: {
+          tags: { include: { tag: true } },
+          subtasks: { orderBy: { position: 'asc' } },
+          blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
+          blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
+          _count: { select: { comments: true, subtasks: true } },
+        },
+      });
     });
 
     // Notify assignees about status change (skip if status didn't change)
@@ -187,24 +197,34 @@ router.patch('/:id/move-section', async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    // Place at end of same-status column in the target section
-    const count = await prisma.task.count({ where: { sectionId, status: task.status } });
-
     const targetSection = await prisma.section.findUnique({
       where: { id: sectionId },
-      select: { id: true, name: true, project: { select: { id: true, name: true } } },
+      select: { id: true, name: true, projectId: true, project: { select: { id: true, name: true } } },
     });
+    if (!targetSection) {
+      res.status(404).json({ error: 'Target section not found' });
+      return;
+    }
+    if (targetSection.projectId !== task.section.project.id) {
+      res.status(400).json({ error: 'Tasks can only move between sections of the same project' });
+      return;
+    }
+    if (!await ensureSectionAccess(req.userId!, sectionId, res, true)) return;
 
-    const updated = await prisma.task.update({
-      where: { id: req.params.id as string },
-      data: { sectionId, position: count },
-      include: {
-        tags: { include: { tag: true } },
-        subtasks: { orderBy: { position: 'asc' } },
-        blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
-        blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
-        _count: { select: { comments: true, subtasks: true } },
-      },
+    // Place at the end of the same-status column, atomically.
+    const updated = await prisma.$transaction(async (tx) => {
+      const count = await tx.task.count({ where: { sectionId, status: task.status } });
+      return tx.task.update({
+        where: { id: req.params.id as string },
+        data: { sectionId, position: count },
+        include: {
+          tags: { include: { tag: true } },
+          subtasks: { orderBy: { position: 'asc' } },
+          blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
+          blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
+          _count: { select: { comments: true, subtasks: true } },
+        },
+      });
     });
 
     const actor = await prisma.user.findUnique({ where: { id: req.userId! }, select: { name: true } });
@@ -302,6 +322,12 @@ router.post('/:id/subtasks', async (req: AuthRequest, res: Response): Promise<vo
         taskId: req.params.id as string,
       },
     });
+    void logTaskEvent({
+      taskId: req.params.id as string,
+      actorId: req.userId!,
+      action: 'SUBTASK_ADDED',
+      details: { title: subtask.title },
+    });
     res.status(201).json(subtask);
   } catch (error) {
     console.error('Create subtask error:', error);
@@ -331,6 +357,14 @@ router.patch('/:id/subtasks/:subtaskId', async (req: AuthRequest, res: Response)
         ...(typeof position === 'number' && { position }),
       },
     });
+    if (typeof completed === 'boolean') {
+      void logTaskEvent({
+        taskId: req.params.id as string,
+        actorId: req.userId!,
+        action: completed ? 'SUBTASK_COMPLETED' : 'SUBTASK_UNCOMPLETED',
+        details: { title: updated.title },
+      });
+    }
     res.json(updated);
   } catch (error) {
     console.error('Update subtask error:', error);
@@ -354,6 +388,12 @@ router.delete('/:id/subtasks/:subtaskId', async (req: AuthRequest, res: Response
     await prisma.subtask.delete({
       where: { id: req.params.subtaskId as string },
     });
+    void logTaskEvent({
+      taskId: req.params.id as string,
+      actorId: req.userId!,
+      action: 'SUBTASK_DELETED',
+      details: { title: existing.title },
+    });
     res.json({ success: true });
   } catch (error) {
     console.error('Delete subtask error:', error);
@@ -365,6 +405,13 @@ router.delete('/:id/subtasks/:subtaskId', async (req: AuthRequest, res: Response
 router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!await requireTaskAccess(req, res)) return;
+    // Record the deletion before removing the row: the ActivityLog FK is
+    // ON DELETE SET NULL, so the audit entry survives with its denormalized title.
+    await logTaskEvent({
+      taskId: req.params.id as string,
+      actorId: req.userId!,
+      action: 'TASK_DELETED',
+    });
     await prisma.task.delete({ where: { id: req.params.id as string } });
     res.json({ success: true });
   } catch (error) {
@@ -384,7 +431,32 @@ router.post('/:id/tags', async (req: AuthRequest, res: Response): Promise<void> 
       res.status(400).json({ error: 'tagId is required' });
       return;
     }
-    await prisma.taskTag.create({ data: { taskId: req.params.id as string, tagId } });
+
+    const [taskProject, tagRecord] = await Promise.all([
+      prisma.task.findUnique({
+        where: { id: req.params.id as string },
+        select: { section: { select: { projectId: true } } },
+      }),
+      prisma.tag.findUnique({ where: { id: tagId }, select: { projectId: true } }),
+    ]);
+    if (!tagRecord) {
+      res.status(404).json({ error: 'Tag not found' });
+      return;
+    }
+    if (!taskProject || tagRecord.projectId !== taskProject.section.projectId) {
+      res.status(400).json({ error: 'Tag belongs to a different project' });
+      return;
+    }
+
+    try {
+      await prisma.taskTag.create({ data: { taskId: req.params.id as string, tagId } });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        res.status(409).json({ error: 'Tag is already applied to this task' });
+        return;
+      }
+      throw error;
+    }
 
     const taskMeta = await prisma.task.findUnique({
       where: { id: req.params.id as string },
@@ -453,6 +525,8 @@ router.delete('/:id/tags/:tagId', async (req: AuthRequest, res: Response): Promi
 // POST /api/tasks/:id/assignees — assign user to task by email
 router.post('/:id/assignees', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireTaskAccess(req, res)) return;
+
     const { email, accessType = 'VIEWER' } = req.body;
     if (!email) { res.status(400).json({ error: 'Email is required' }); return; }
     if (!['FULL', 'EDITOR', 'VIEWER'].includes(accessType)) {
@@ -514,6 +588,8 @@ router.post('/:id/assignees', async (req: AuthRequest, res: Response): Promise<v
 // GET /api/tasks/:id/assignees — list task assignees
 router.get('/:id/assignees', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireTaskAccess(req, res, false)) return;
+
     const assignees = await prisma.taskAssignee.findMany({
       where: { taskId: req.params.id as string },
       include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
@@ -528,6 +604,8 @@ router.get('/:id/assignees', async (req: AuthRequest, res: Response): Promise<vo
 // PATCH /api/tasks/:id/assignees/:userId — update assignee accessType
 router.patch('/:id/assignees/:userId', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireTaskAccess(req, res)) return;
+
     const { accessType } = req.body;
     if (!['FULL', 'EDITOR', 'VIEWER'].includes(accessType)) {
       res.status(400).json({ error: 'Invalid accessType' }); return;
@@ -547,6 +625,8 @@ router.patch('/:id/assignees/:userId', async (req: AuthRequest, res: Response): 
 // DELETE /api/tasks/:id/assignees/:userId — remove task assignee
 router.delete('/:id/assignees/:userId', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireTaskAccess(req, res)) return;
+
     const removedUserId = req.params.userId as string;
     const taskId = req.params.id as string;
 
@@ -632,9 +712,25 @@ router.post('/:id/dependencies', async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const dependsOnTask = await prisma.task.findUnique({ where: { id: dependsOnId } });
+    const dependsOnTask = await prisma.task.findUnique({
+      where: { id: dependsOnId },
+      select: { id: true, title: true, section: { select: { projectId: true } } },
+    });
     if (!dependsOnTask) {
       res.status(404).json({ error: 'Dependency task not found' });
+      return;
+    }
+
+    const sourceTask = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { section: { select: { projectId: true } } },
+    });
+    if (!sourceTask) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+    if (sourceTask.section.projectId !== dependsOnTask.section.projectId) {
+      res.status(400).json({ error: 'Dependencies must be between tasks of the same project' });
       return;
     }
 

@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
-import { getSectionAccess, canEdit } from '../lib/access';
+import { getSectionAccess, canEdit, requireSectionAccess } from '../lib/access';
 import { logActivity } from '../lib/activity';
 
 const router = Router();
@@ -93,6 +93,8 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
 // Query params: archived, status (repeatable), assigneeId, tagId, dueDateFrom, dueDateTo
 router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireSectionAccess(req, res, { param: 'sectionId', minEdit: false })) return;
+
     const showArchived = req.query.archived === 'true';
     const rawStatus = req.query.status;
     const statusList: string[] = typeof rawStatus === 'string' ? [rawStatus] : Array.isArray(rawStatus) ? (rawStatus as string[]) : [];
@@ -101,6 +103,13 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
     const tagId = typeof req.query.tagId === 'string' ? req.query.tagId : undefined;
     const dueDateFrom = typeof req.query.dueDateFrom === 'string' ? req.query.dueDateFrom : undefined;
     const dueDateTo = typeof req.query.dueDateTo === 'string' ? req.query.dueDateTo : undefined;
+
+    // Pagination is opt-in and capped: the board requests its whole section,
+    // but large sections can be paged with ?limit=&offset=.
+    const rawLimit = Number.parseInt(String(req.query.limit ?? ''), 10);
+    const rawOffset = Number.parseInt(String(req.query.offset ?? ''), 10);
+    const pageSize = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 1000) : 500;
+    const skip = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0;
 
     const where: Record<string, unknown> = {
       sectionId: req.params.sectionId as string,
@@ -126,6 +135,7 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
     }
 
     const tasks = await prisma.task.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       where: where as any,
       include: {
         tags: { include: { tag: true } },
@@ -136,7 +146,11 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
         _count: { select: { comments: true, subtasks: true } },
       },
       orderBy: { position: 'asc' },
+      take: pageSize,
+      skip,
     });
+    res.setHeader('X-Page-Limit', String(pageSize));
+    res.setHeader('X-Page-Offset', String(skip));
     res.json(tasks);
   } catch (error) {
     console.error('List tasks error:', error);

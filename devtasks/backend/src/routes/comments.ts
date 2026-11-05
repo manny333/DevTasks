@@ -1,8 +1,9 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { requireTaskAccess } from '../lib/access';
 import { notify } from '../lib/notify';
-import { logActivity } from '../lib/activity';
+import { logActivity, logTaskEvent } from '../lib/activity';
 
 const router = Router();
 router.use(authMiddleware);
@@ -10,9 +11,15 @@ router.use(authMiddleware);
 // POST /api/tasks/:taskId/comments — create comment
 router.post('/:taskId/comments', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireTaskAccess(req, res, true, 'taskId')) return;
+
     const { content, mentionedUserIds } = req.body;
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
       res.status(400).json({ error: 'Content is required' });
+      return;
+    }
+    if (content.length > 10_000) {
+      res.status(400).json({ error: 'Comment is too long (max 10000 characters)' });
       return;
     }
 
@@ -100,11 +107,22 @@ router.post('/:taskId/comments', async (req: AuthRequest, res: Response): Promis
 // GET /api/tasks/:taskId/comments — list comments
 router.get('/:taskId/comments', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireTaskAccess(req, res, false, 'taskId')) return;
+
+    const rawLimit = Number.parseInt(String(req.query.limit ?? ''), 10);
+    const rawOffset = Number.parseInt(String(req.query.offset ?? ''), 10);
+    const commentPageSize = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 500) : 200;
+    const commentOffset = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0;
+
     const comments = await prisma.comment.findMany({
       where: { taskId: req.params.taskId as string },
       include: { author: { select: { id: true, name: true, avatar: true } } },
       orderBy: { createdAt: 'asc' },
+      take: commentPageSize,
+      skip: commentOffset,
     });
+    res.setHeader('X-Page-Limit', String(commentPageSize));
+    res.setHeader('X-Page-Offset', String(commentOffset));
     res.json(comments);
   } catch (error) {
     console.error('List comments error:', error);
@@ -115,8 +133,10 @@ router.get('/:taskId/comments', async (req: AuthRequest, res: Response): Promise
 // DELETE /api/tasks/:taskId/comments/:id — delete comment (only author)
 router.delete('/:taskId/comments/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!await requireTaskAccess(req, res, false, 'taskId')) return;
+
     const comment = await prisma.comment.findUnique({ where: { id: req.params.id as string } });
-    if (!comment) {
+    if (!comment || comment.taskId !== req.params.taskId) {
       res.status(404).json({ error: 'Comment not found' });
       return;
     }
@@ -124,6 +144,12 @@ router.delete('/:taskId/comments/:id', async (req: AuthRequest, res: Response): 
       res.status(403).json({ error: 'Can only delete your own comments' });
       return;
     }
+    void logTaskEvent({
+      taskId: comment.taskId,
+      actorId: req.userId!,
+      action: 'COMMENT_DELETED',
+      details: { preview: comment.content.slice(0, 120) },
+    });
     await prisma.comment.delete({ where: { id: req.params.id as string } });
     res.json({ success: true });
   } catch (error) {
@@ -133,4 +159,3 @@ router.delete('/:taskId/comments/:id', async (req: AuthRequest, res: Response): 
 });
 
 export default router;
-

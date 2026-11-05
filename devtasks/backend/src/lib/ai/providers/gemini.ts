@@ -26,6 +26,7 @@ export class GeminiProvider implements AIProvider {
             maxOutputTokens: options?.maxTokens ?? 4096,
           },
         }),
+        signal: AbortSignal.timeout(60_000),
       },
     );
 
