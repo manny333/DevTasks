@@ -1205,6 +1205,10 @@ input[type="date"]:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .project-card { padding: 16px 16px 12px; }
 
+  .api-key-model,
+  .api-key-status { display: none; }
+  .api-key-editor { padding-left: 12px; }
+
   /* Keep the navbar on one line on phones */
   .navbar-logo-text { display: none; }
   .navbar-logout { padding: 0 8px; }

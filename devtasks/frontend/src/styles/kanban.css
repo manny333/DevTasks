@@ -530,32 +530,56 @@
 .settings-error { color: #ef4444; font-size: 12px; margin-bottom: 8px; }
 .settings-success { color: #22c55e; font-size: 12px; margin-bottom: 8px; }
 .settings-providers { display: flex; flex-direction: column; gap: 12px; }
-.settings-provider-card {
+
+/* Minimal AI keys panel */
+.api-keys-panel {
   border: 1px solid var(--border); border-radius: 12px;
-  padding: 16px; background: var(--bg-secondary);
+  background: var(--bg-secondary); overflow: hidden;
 }
-.settings-provider-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.settings-provider-icon { font-size: 22px; }
-.settings-provider-info { display: flex; flex-direction: column; gap: 1px; flex: 1; }
-.settings-provider-info strong { font-size: 13px; }
-.settings-provider-info span { font-size: 11px; color: var(--text-muted); }
-.settings-badge-saved {
-  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px;
-  background: color-mix(in srgb, #22c55e 12%, transparent); color: #16a34a;
+.api-key-row { border-top: 1px solid var(--border); }
+.api-key-row:first-child { border-top: 0; }
+.api-key-row.is-editing { background: color-mix(in srgb, var(--bg-tertiary) 40%, transparent); }
+.api-key-main { display: flex; align-items: center; gap: 10px; padding: 9px 12px; min-height: 52px; }
+.api-key-icon { width: 24px; text-align: center; font-size: 17px; flex-shrink: 0; }
+.api-key-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.api-key-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.api-key-model { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.api-key-status {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  background: var(--bg-tertiary); color: var(--text-muted); white-space: nowrap;
 }
-.settings-provider-form { display: flex; gap: 6px; align-items: center; }
-.settings-key-input {
-  flex: 1; padding: 7px 10px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--bg-tertiary);
+.api-key-status.is-saved {
+  background: color-mix(in srgb, #22c55e 14%, transparent); color: #16a34a;
+}
+.api-key-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.api-key-action {
+  border: 0; background: transparent; color: var(--text-muted);
+  font-size: 12px; font-weight: 500; padding: 5px 8px; border-radius: 6px; cursor: pointer;
+}
+.api-key-action:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.api-key-delete {
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--text-muted);
+  border-radius: 6px; cursor: pointer;
+}
+.api-key-delete:hover { background: color-mix(in srgb, #ef4444 10%, transparent); color: #ef4444; }
+.api-key-editor { display: flex; align-items: center; gap: 6px; padding: 0 12px 10px 46px; }
+.api-key-input {
+  flex: 1; height: 32px; padding: 0 10px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--bg-primary);
   color: var(--text-primary); font-size: 12px;
 }
-.settings-key-input:focus { outline: none; border-color: var(--accent); }
-.settings-key-toggle {
-  padding: 7px 8px; border-radius: 8px; border: 1px solid var(--border);
-  background: var(--bg-secondary); color: var(--text-muted);
-  cursor: pointer; display: flex; align-items: center;
+.api-key-input:focus { outline: none; border-color: var(--accent); }
+.api-key-visibility {
+  width: 32px; height: 32px; display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg-secondary); color: var(--text-muted); cursor: pointer;
 }
-.settings-key-toggle:hover { color: var(--text-primary); }
+.api-key-visibility:hover { color: var(--text-primary); }
+.api-key-hint {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 8px; font-size: 11px; color: var(--text-muted);
+}
 .btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
 
 /* ─── DatePicker (react-day-picker) ─────────────────── */
