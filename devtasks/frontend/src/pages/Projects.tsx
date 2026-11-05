@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+// Projects overview: hero, KPI cards, search toolbar and project grid.
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
@@ -30,6 +31,33 @@ export default function Projects() {
 
   const totalSections = useMemo(() => projects.reduce((s, p) => s + (p._count?.sections ?? 0), 0), [projects]);
   const totalMembers = useMemo(() => projects.reduce((s, p) => s + (p._count?.members ?? 0), 0), [projects]);
+  const firstName = user?.name?.split(' ')[0] ?? '';
+
+  const filteredProjects = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return projects;
+    return projects.filter(
+      (project) =>
+        project.name.toLowerCase().includes(term) ||
+        (project.description ?? '').toLowerCase().includes(term)
+    );
+  }, [projects, search]);
+
+  const accessLabel = (project: Project): string => {
+    const access = project.myAccess;
+    if (!access) return '';
+    if (access.level === 'owner') return t('members.owner');
+    if (access.level === 'section') return t('members.sectionAccess');
+    if (access.accessType === 'FULL') return t('members.access.full');
+    if (access.accessType === 'EDITOR') return t('members.access.editor');
+    return t('members.access.viewer');
+  };
+
+  const accessClass = (project: Project): string => {
+    const access = project.myAccess;
+    if (!access) return '';
+    return access.level === 'owner' ? 'access-owner' : `access-${access.accessType.toLowerCase()}`;
+  };
 
   const closeCreate = () => {
     setShowCreate(false);
@@ -99,38 +127,25 @@ export default function Projects() {
 
   return (
     <div className="projects-page">
-      {/* Hero Banner */}
-      <div className="projects-hero">
-        <div className="projects-hero-dots" />
-
-        <div className="projects-hero-content">
-          <div className="projects-hero-left">
+      {/* Hero */}
+      <section className="projects-hero">
+        <div className="projects-hero-glow" aria-hidden="true" />
+        <div className="projects-hero-main">
+          <div className="projects-hero-copy">
+            <span className="projects-hero-eyebrow">{t('projects.workspace')}</span>
             <h1 className="projects-hero-title">
-              {user?.name ? `${user.name.split(' ')[0]}'s ${t('projects.title')}` : t('projects.title')}
+              {firstName ? t('projects.greeting', { name: firstName }) : t('projects.title')}
             </h1>
             <p className="projects-hero-subtitle">{t('projects.subtitle')}</p>
-
-            <div className="projects-hero-stats">
-              <span className="hero-stat">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            <div className="projects-hero-actions">
+              <button className="btn-hero-primary" onClick={() => setShowCreate(true)}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-                {projects.length} {t('projects.title')}
-              </span>
-              <span className="hero-stat">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                </svg>
-                {totalMembers} {t('projects.members')}
-              </span>
-            </div>
-
-            <div className="hero-actions-row">
-              <button className="btn-hero-create" onClick={() => setShowCreate(true)}>
-                + {t('projects.create')}
+                {t('projects.create')}
               </button>
-              <button className="btn-hero-create" onClick={() => setShowAIImport(true)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <button className="btn-hero-secondary" onClick={() => setShowAIImport(true)}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
                 {t('ai.importButton')}
@@ -143,141 +158,171 @@ export default function Projects() {
             </div>
           )}
         </div>
+      </section>
 
-        <div className="projects-hero-wave">
-          <svg viewBox="0 0 1200 40" preserveAspectRatio="none">
-            <path d="M0,18 C300,34 600,4 900,18 C1050,26 1150,16 1200,18 L1200,40 L0,40 Z" fill="var(--bg-primary)"/>
-          </svg>
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div className="projects-stats-row">
+      {/* KPIs */}
+      <section className="projects-stats-row" aria-label={t('projects.title')}>
         <div className="projects-stat-card">
-          <span className="stat-card-number">{projects.length}</span>
-          <span className="stat-card-label">{t('projects.title')}</span>
-        </div>
-        <div className="projects-stat-card">
-          <span className="stat-card-number">{totalSections}</span>
-          <span className="stat-card-label">{t('sections.title')}</span>
+          <span className="stat-card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            </svg>
+          </span>
+          <div className="stat-card-body">
+            <span className="stat-card-number">{projects.length}</span>
+            <span className="stat-card-label">{t('projects.title')}</span>
+          </div>
         </div>
         <div className="projects-stat-card">
-          <span className="stat-card-number">{totalMembers}</span>
-          <span className="stat-card-label">{t('projects.members')}</span>
+          <span className="stat-card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="14" y="3" width="7" height="11" rx="1.5"/>
+            </svg>
+          </span>
+          <div className="stat-card-body">
+            <span className="stat-card-number">{totalSections}</span>
+            <span className="stat-card-label">{t('sections.title')}</span>
+          </div>
         </div>
-      </div>
+        <div className="projects-stat-card">
+          <span className="stat-card-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </span>
+          <div className="stat-card-body">
+            <span className="stat-card-number">{totalMembers}</span>
+            <span className="stat-card-label">{t('projects.members_plural')}</span>
+          </div>
+        </div>
+      </section>
 
-      {/* Empty state */}
       {projects.length === 0 ? (
         <div className="projects-empty-state">
           <div className="projects-empty-icon">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2"/>
               <line x1="8" y1="21" x2="16" y2="21"/>
               <line x1="12" y1="17" x2="12" y2="21"/>
             </svg>
           </div>
-          <p className="projects-empty-title">{t('projects.noProjects')}</p>
+          <div className="projects-empty-copy">
+            <h2 className="projects-empty-title">{t('projects.noProjects')}</h2>
+            <p className="projects-empty-subtitle">{t('projects.subtitle')}</p>
+          </div>
           <button className="btn-primary" onClick={() => setShowCreate(true)}>
             + {t('projects.create')}
           </button>
         </div>
       ) : (
         <>
-          {/* Search bar */}
-          <div className="projects-search-bar">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              type="text"
-              className="projects-search-input"
-              placeholder={t('projects.searchPlaceholder')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && (
-              <button className="projects-search-clear" onClick={() => setSearch('')}>✕</button>
-            )}
+          <div className="projects-toolbar">
+            <div className="projects-search-bar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                type="text"
+                className="projects-search-input"
+                placeholder={t('projects.searchPlaceholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="projects-search-clear" onClick={() => setSearch('')} aria-label={t('common.cancel')}>
+                  ✕
+                </button>
+              )}
+            </div>
+            <span className="projects-count">{t('projects.results', { count: filteredProjects.length })}</span>
           </div>
-          <div className="projects-grid">
-            {projects
-              .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.description?.toLowerCase().includes(search.toLowerCase()))
-              .map((project, index) => {
-            const color = getProjectColor(project.name);
-            const initial = project.name.charAt(0).toUpperCase();
-            return (
-              <div key={project.id} className="project-card-wrapper project-card-animate" style={{ animationDelay: `${index * 60}ms` }}>
-                <Link to={`/projects/${project.slug}`} className="project-card">
-                  <div className="project-card-top" style={{ background: color }}>
-                    <span className="project-card-initial">{initial}</span>
-                  </div>
-                  <div className="project-card-body">
-                    <h2>{project.name}</h2>
-                    {project.description && <p>{project.description}</p>}
-                  </div>
-                  <div className="project-card-meta">
-                    <span className="project-meta-item">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
-                      </svg>
-                      {project._count?.sections ?? 0} {t('projects.sections')}
-                    </span>
-                    <span className="project-meta-item">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                      </svg>
-                      {project._count?.members ?? 0} {t('projects.members')}
-                    </span>
-                    {project.myAccess && (
-                      <span className={`project-access-badge access-${project.myAccess.level === 'owner' ? 'owner' : project.myAccess.accessType.toLowerCase()}`}>
-                        {project.myAccess.level === 'owner'
-                          ? t('members.owner')
-                          : project.myAccess.level === 'section'
-                          ? t('members.sectionAccess')
-                          : project.myAccess.accessType === 'FULL'
-                          ? t('members.access.full')
-                          : project.myAccess.accessType === 'EDITOR'
-                          ? t('members.access.editor')
-                          : t('members.access.viewer')}
-                      </span>
-                    )}
-                  </div>
-                </Link>
 
-                {/* ⋯ menu */}
-                <div className="project-card-menu-wrapper">
-                  <button
-                    className="project-card-menu-btn"
-                    onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === project.id ? null : project.id); }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                      <circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>
-                    </svg>
-                  </button>
-                  {openMenuId === project.id && (
-                    <div className="project-card-dropdown">
-                      <button onClick={(e) => { e.preventDefault(); openEdit(project); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          {filteredProjects.length === 0 ? (
+            <div className="projects-no-results">
+              <p>{t('projects.noResults')}</p>
+              <button className="btn-secondary" onClick={() => setSearch('')}>{t('filters.clear')}</button>
+            </div>
+          ) : (
+            <div className="projects-grid">
+              {filteredProjects.map((project, index) => {
+                const color = getProjectColor(project.name);
+                const initial = project.name.charAt(0).toUpperCase();
+                return (
+                  <div key={project.id} className="project-card-wrapper project-card-animate" style={{ animationDelay: `${index * 50}ms` }}>
+                    <Link
+                      to={`/projects/${project.slug}`}
+                      className="project-card"
+                      style={{ '--project-color': color } as React.CSSProperties}
+                    >
+                      <div className="project-card-head">
+                        <span className="project-card-initial">{initial}</span>
+                        <h2 className="project-card-title">{project.name}</h2>
+                      </div>
+                      <p className={`project-card-desc${project.description ? '' : ' is-empty'}`}>
+                        {project.description || t('projects.noDescription')}
+                      </p>
+                      <div className="project-card-meta">
+                        <span className="project-meta-item">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/>
+                          </svg>
+                          {t('projects.sections', { count: project._count?.sections ?? 0 })}
+                        </span>
+                        <span className="project-meta-item">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                          </svg>
+                          {t('projects.members', { count: project._count?.members ?? 0 })}
+                        </span>
+                        {project.myAccess && (
+                          <span className={`project-access-badge ${accessClass(project)}`}>
+                            {accessLabel(project)}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+
+                    <div className="project-card-menu-wrapper">
+                      <button
+                        className={`project-card-menu-btn${openMenuId === project.id ? ' is-open' : ''}`}
+                        onClick={(e) => { e.preventDefault(); setOpenMenuId(openMenuId === project.id ? null : project.id); }}
+                        aria-label={t('common.edit')}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                          <circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/>
                         </svg>
-                        {t('common.edit')}
                       </button>
-                      <button className="danger" onClick={(e) => { e.preventDefault(); setOpenMenuId(null); setDeleteTarget(project); setDeleteConfirm(''); }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                        </svg>
-                        {t('common.delete')}
-                      </button>
+                      {openMenuId === project.id && (
+                        <div className="project-card-dropdown">
+                          <button onClick={(e) => { e.preventDefault(); openEdit(project); }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            {t('common.edit')}
+                          </button>
+                          <button className="danger" onClick={(e) => { e.preventDefault(); setOpenMenuId(null); setDeleteTarget(project); setDeleteConfirm(''); }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                            </svg>
+                            {t('common.delete')}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            );  
-          })}
-          </div>
+                  </div>
+                );
+              })}
+
+              <button type="button" className="project-card project-card-add" onClick={() => setShowCreate(true)}>
+                <span className="project-card-add-icon">+</span>
+                <span className="project-card-add-label">{t('projects.create')}</span>
+                <span className="project-card-add-hint">{t('projects.createHint')}</span>
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -304,31 +349,31 @@ export default function Projects() {
             </div>
 
             <form onSubmit={createProject} className="create-project-form">
-                <input
-                  className="create-project-name-input"
-                  type="text"
-                  placeholder={t('projects.namePlaceholder')}
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  autoFocus
-                  required
-                />
-                <textarea
-                  className="create-project-desc-input"
-                  placeholder={t('projects.description')}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  rows={3}
-                />
-                <div className="create-project-footer">
-                  <button type="button" className="btn-secondary" onClick={closeCreate}>
-                    {t('common.cancel')}
-                  </button>
-                  <button type="submit" className="btn-primary" disabled={saving}>
-                    {saving ? t('common.loading') : t('common.save')}
-                  </button>
-                </div>
-              </form>
+              <input
+                className="create-project-name-input"
+                type="text"
+                placeholder={t('projects.namePlaceholder')}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                autoFocus
+                required
+              />
+              <textarea
+                className="create-project-desc-input"
+                placeholder={t('projects.description')}
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={3}
+              />
+              <div className="create-project-footer">
+                <button type="button" className="btn-secondary" onClick={closeCreate}>
+                  {t('common.cancel')}
+                </button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? t('common.loading') : t('common.save')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -421,4 +466,3 @@ export default function Projects() {
     </div>
   );
 }
-

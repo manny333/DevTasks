@@ -20,6 +20,8 @@ export default function Navbar() {
   // Trigger shake animation when a new notification arrives via SSE
   useEffect(() => {
     if (!newArrived) return;
+    // The animation is a side effect of an external event, not derived state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setBellShake(true);
   }, [newArrived]);
 
@@ -33,7 +35,7 @@ export default function Navbar() {
     <nav className="navbar">
       <Link to="/projects" className="navbar-brand navbar-logo-pill">
         <img src={logoIcon} alt="Kanvy" style={{ height: '32px', filter: 'none' }} />
-        <img src={logoText} alt="Kanvy" style={{ height: '20px', marginLeft: '8px', filter: 'none' }} />
+        <img src={logoText} alt="Kanvy" className="navbar-logo-text" style={{ height: '20px', marginLeft: '8px', filter: 'none' }} />
       </Link>
 
       <div className="navbar-actions">
@@ -81,8 +83,13 @@ export default function Navbar() {
           <div className="navbar-user">
             {user.avatar && <img src={user.avatar} alt={user.name} className="avatar-sm" referrerPolicy="no-referrer" />}
             <span>{user.name}</span>
-            <button className="btn-secondary btn-sm" onClick={logout}>
-              {t('auth.signOut')}
+            <button className="btn-secondary btn-sm navbar-logout" onClick={logout} title={t('auth.signOut')} aria-label={t('auth.signOut')}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              <span className="navbar-logout-label">{t('auth.signOut')}</span>
             </button>
           </div>
         )}
