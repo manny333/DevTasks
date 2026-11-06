@@ -1379,11 +1379,17 @@
     border-radius: 10px;
   background: var(--bg-tertiary); cursor: text;
 }
+.task-drawer .task-modal-desc {
+  max-width: 100%;
+  box-sizing: border-box;
+}
 .task-modal-desc.markdown-body,
 .task-modal-desc.markdown-body * {
   overflow-wrap: anywhere; word-break: break-word; max-width: 100%;
-  margin: 0 28px 0 28px; /* Override default markdown-body padding */
 }
+.task-modal-desc.markdown-body > :first-child { margin-top: 0; }
+.task-modal-desc.markdown-body > :last-child { margin-bottom: 0; }
+.task-modal-desc.markdown-body p { margin: 0 0 0.6em; }
 .task-modal-desc pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .task-modal-desc img { max-width: 100%; height: auto; }
 .task-modal-desc-input {
