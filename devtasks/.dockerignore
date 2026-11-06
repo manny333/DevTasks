@@ -1,0 +1,16 @@
+**/node_modules
+**/dist
+**/.git
+**/.gitignore
+**/.DS_Store
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.docker.example
+backend/uploads
+backend/dist
+frontend/dist
+mcp-server
+dsh-kanvy
+samples
+**/*.log

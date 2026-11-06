@@ -6,11 +6,11 @@ Aplicación de gestión de tareas estilo Kanban (multi-proyecto, multiusuario, c
 - **Backend:** Express 5 + Prisma 7 + PostgreSQL 15, puerto 5001
 - **Auth:** Google Identity Services + JWT
 
-## Arranque rápido
+## Arranque rápido (desarrollo local)
 
 ```powershell
-# 1. Base de datos
-docker compose up -d
+# 1. Base de datos (solo Postgres)
+docker compose up -d postgres
 
 # 2. Backend
 cd backend
@@ -28,6 +28,29 @@ npm run dev                  # http://localhost:5173
 
 Datos de prueba: `cd backend && npm run db:seed`.
 
+## Docker (toda la app en contenedores)
+
+Compila el frontend, el backend y levanta PostgreSQL en un solo stack. El backend sirve el frontend en la misma URL.
+
+```powershell
+cd devtasks
+copy .env.docker.example .env.docker
+# completar JWT_SECRET, POSTGRES_PASSWORD, GOOGLE_CLIENT_ID y VITE_GOOGLE_CLIENT_ID
+
+docker compose --env-file .env.docker up -d --build
+# http://localhost:5001
+```
+
+- Las migraciones se aplican solas al arrancar (`prisma migrate deploy`).
+- `uploads/` y `pgdata/` quedan en volúmenes de Docker.
+- Si ya tienes el backend local en 5001 o Postgres en 5433, cambia `APP_PORT` / `POSTGRES_PORT` o detén los servicios locales.
+- Logs: `docker compose --env-file .env.docker logs -f app`
+- Seed opcional: `docker compose --env-file .env.docker exec app npm run db:seed`
+- Parar: `docker compose --env-file .env.docker down`
+- Borrar datos: `docker compose --env-file .env.docker down -v`
+
+Para Google OAuth, añade `http://localhost:5001` (o tu dominio) como origen autorizado en Google Cloud Console.
+
 ## Comandos
 
 | Comando | Dónde | Qué hace |
@@ -42,6 +65,8 @@ Datos de prueba: `cd backend && npm run db:seed`.
 | `npx tsc --noEmit` / `npx tsc -b` | backend / frontend | Typecheck |
 | `npm run db:migrate` | backend | `prisma migrate dev` |
 | `npm run db:seed` | backend | Datos demo idempotentes |
+| `docker compose up -d postgres` | raíz | Solo PostgreSQL para desarrollo |
+| `docker compose --env-file .env.docker up -d --build` | raíz | App completa en Docker |
 
 ## Seguridad
 
