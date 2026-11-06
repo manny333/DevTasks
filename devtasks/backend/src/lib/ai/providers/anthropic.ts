@@ -1,10 +1,10 @@
+import { requestSignal } from '../abort';
 import type { AIProvider, AIConfig, ChatMessage, ChatOptions, ChatResponse } from '../types';
 
 export class AnthropicProvider implements AIProvider {
   constructor(private config: AIConfig) {}
 
   async chat(messages: ChatMessage[], options?: ChatOptions): Promise<ChatResponse> {
-    // Extract system message (Anthropic has a separate system param)
     const systemMsg = messages.find(m => m.role === 'system');
     const chatMessages = messages.filter(m => m.role !== 'system');
 
@@ -25,7 +25,7 @@ export class AnthropicProvider implements AIProvider {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(60_000),
+      signal: requestSignal(120_000, options?.signal),
     });
 
     if (!res.ok) {
@@ -37,13 +37,13 @@ export class AnthropicProvider implements AIProvider {
     const content = data.content?.[0]?.text;
     if (!content) throw new Error('Empty response from Anthropic');
 
-    return {
-      content,
-      usage: data.usage ? {
-        promptTokens: data.usage.input_tokens,
-        completionTokens: data.usage.output_tokens,
-      } : undefined,
-    };
+    const usage = data.usage ? {
+      promptTokens: data.usage.input_tokens,
+      completionTokens: data.usage.output_tokens,
+    } : undefined;
+    if (usage) options?.onUsage?.(usage);
+
+    return { content, usage };
   }
 
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {

@@ -238,7 +238,10 @@
     "configureKeys": "Configurar",
     "projectName": "Nombre del proyecto",
     "projectNamePlaceholder": "Opcional, la IA sugerirá si está vacío",
-    "startDate": "Fecha de inicio"
+    "startDate": "Fecha de inicio",
+    "model": "Modelo",
+    "tokensUsed": "{{total}} tokens usados ({{prompt}} de entrada + {{completion}} de salida)",
+    "truncatedWarning": "Solo se procesarán los primeros 6.000 caracteres (documento: {{chars}} caracteres)."
   },
   "settings": {
     "title": "Configuración",

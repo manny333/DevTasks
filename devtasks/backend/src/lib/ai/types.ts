@@ -8,6 +8,12 @@ export interface ChatOptions {
   temperature?: number;
   maxTokens?: number;
   responseFormat?: 'text' | 'json_object';
+  /** Aborts the upstream request when the client disconnects. */
+  signal?: AbortSignal;
+  /** DeepSeek V4 reasoning effort; ignored by providers without this knob. */
+  effort?: 'low' | 'high' | 'max';
+  /** Reports provider usage, including for streaming responses. */
+  onUsage?: (usage: { promptTokens: number; completionTokens: number }) => void;
 }
 
 export interface ChatResponse {
@@ -65,6 +71,7 @@ export interface AIImportSection {
 export interface AIImportPreview {
   sections: AIImportSection[];
   projectName?: string;
+  usage?: { promptTokens: number; completionTokens: number };
 }
 
 export interface AIConfig {

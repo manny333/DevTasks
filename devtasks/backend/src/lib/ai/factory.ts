@@ -6,11 +6,11 @@ import { GeminiProvider } from './providers/gemini';
 
 type ProviderId = 'deepseek' | 'openai' | 'anthropic' | 'gemini';
 
-const PROVIDER_DEFAULTS: Record<ProviderId, { baseUrl: string; model: string; label: string }> = {
-  deepseek:  { baseUrl: 'https://api.deepseek.com',  model: 'deepseek-v4-pro',            label: 'DeepSeek' },
-  openai:    { baseUrl: 'https://api.openai.com',     model: 'gpt-4o',                     label: 'OpenAI' },
-  anthropic: { baseUrl: 'https://api.anthropic.com',  model: 'claude-3-5-sonnet-20241022', label: 'Claude (Anthropic)' },
-  gemini:    { baseUrl: 'https://generativelanguage.googleapis.com', model: 'gemini-2.0-flash', label: 'Gemini (Google)' },
+const PROVIDER_DEFAULTS: Record<ProviderId, { baseUrl: string; model: string; models: string[]; label: string }> = {
+  deepseek:  { baseUrl: 'https://api.deepseek.com',  model: 'deepseek-v4-pro', models: ['deepseek-flash', 'deepseek-v4-pro'], label: 'DeepSeek' },
+  openai:    { baseUrl: 'https://api.openai.com',     model: 'gpt-4o',                     models: ['gpt-4o'], label: 'OpenAI' },
+  anthropic: { baseUrl: 'https://api.anthropic.com',  model: 'claude-3-5-sonnet-20241022', models: ['claude-3-5-sonnet-20241022'], label: 'Claude (Anthropic)' },
+  gemini:    { baseUrl: 'https://generativelanguage.googleapis.com', model: 'gemini-2.0-flash', models: ['gemini-2.0-flash'], label: 'Gemini (Google)' },
 };
 
 /** Hosts the server may talk to when no explicit allowlist is configured. */
@@ -80,17 +80,20 @@ export function createProvider(provider: string, apiKey: string, baseUrl?: strin
 }
 
 export function getAvailableProviders(userKeys?: { provider: string; label?: string | null }[]): {
-  id: string; label: string; model: string; hasKey: boolean; hasUserKey: boolean;
+  id: string; label: string; model: string; models: string[]; hasKey: boolean; hasUserKey: boolean;
 }[] {
   const keyMap = new Map(userKeys?.map(k => [k.provider, k.label]) || []);
   return (Object.keys(PROVIDER_DEFAULTS) as ProviderId[]).map(id => {
     const def = PROVIDER_DEFAULTS[id];
     const envKey = !!process.env[`AI_${id.toUpperCase()}_API_KEY`];
     const userKey = keyMap.has(id);
+    const envModel = process.env[`AI_${id.toUpperCase()}_MODEL`];
+    const models = [...new Set([envModel, ...def.models].filter((model): model is string => Boolean(model)))];
     return {
       id,
       label: def.label,
-      model: process.env[`AI_${id.toUpperCase()}_MODEL`] || def.model,
+      model: envModel || def.model,
+      models,
       hasKey: envKey || userKey,
       hasUserKey: userKey,
     };

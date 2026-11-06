@@ -6,7 +6,8 @@ import { ensureProjectAccess } from '../lib/access';
 import { getDecryptedUserApiKey } from '../lib/userApiKeys';
 import { rateLimit } from '../lib/rateLimit';
 import { buildSystemPrompt, buildUserPrompt } from '../lib/ai/prompts';
-import type { AIProvider, AIImportPreview, AIImportSection } from '../lib/ai/types';
+import { AIResponseError, buildPreviewFromParsed, parseAIResponse } from '../lib/ai/preview';
+import type { AIImportPreview, AIImportSection } from '../lib/ai/types';
 
 const router = Router();
 router.use(authMiddleware);
@@ -30,8 +31,6 @@ router.get('/providers', async (req: AuthRequest, res: Response) => {
 
 // ─── Shared helpers ──────────────────────────────────────────────────
 
-const PREVIEW_COLORS = ['#6366f1', '#f59e0b', '#22c55e', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#ef4444', '#84cc16'];
-
 /** Validation error that must reach the client as 4xx, not as a 500. */
 class ImportError extends Error {
   constructor(public readonly status: number, message: string) {
@@ -40,91 +39,22 @@ class ImportError extends Error {
   }
 }
 
-async function parseAIResponse(rawContent: string, ai: AIProvider, model?: string): Promise<any> {
-  // Strategy 1: extract from markdown code block
-  let content = rawContent;
-  const codeBlock = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (codeBlock) content = codeBlock[1].trim();
-
-  // Strategy 2: extract outermost { } or [ ]
-  const jsonExtract = content.match(/([\{\[][\s\S]*[\}\]])/);
-  if (jsonExtract) content = jsonExtract[1].trim();
-
-  // Strategy 3: fix common LLM JSON mistakes
-  const fixed = content
-    .replace(/,\s*}/g, '}')
-    .replace(/,\s*\]/g, ']')
-    .replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3')
-    .replace(/:\s*'([^']*)'/g, ':"$1"');
-
-  try {
-    return JSON.parse(fixed);
-  } catch {
-    // Last resort: ask LLM to fix it (retry once)
-    const fixResponse = await ai.chat(
-      [
-        { role: 'system', content: 'You are a JSON fixer. The following text should be valid JSON but has a syntax error. Return ONLY the corrected JSON, no other text.' },
-        { role: 'user', content: `Fix this JSON:\n${content.slice(0, 2000)}` },
-      ],
-      { model, temperature: 0, maxTokens: 4096 }
-    );
-    const fixedContent = fixResponse.content.replace(/```[^`]*```/g, '').trim();
-    const fixedMatch = fixedContent.match(/(\{[\s\S]*\})/);
-    return JSON.parse(fixedMatch ? fixedMatch[1] : fixedContent);
-  }
+/** Cancels the upstream AI request when the client disconnects or cancels. */
+function attachClientAbort(res: Response): AbortController {
+  const controller = new AbortController();
+  res.once('close', () => {
+    if (!res.writableEnded) {
+      controller.abort();
+      console.log('[AI] client disconnected; upstream request aborted');
+    }
+  });
+  return controller;
 }
 
-function buildPreviewFromParsed(parsed: any): { preview: AIImportSection[]; projectName?: string } {
-  const rawSections = Array.isArray(parsed.sections) ? parsed.sections : [];
-  const projectName = typeof parsed.projectName === 'string' ? parsed.projectName : undefined;
-
-  const preview: AIImportSection[] = [];
-  let secIdx = 0;
-  let taskIdx = 0;
-
-  for (const raw of rawSections) {
-    if (!raw.name || typeof raw.name !== 'string') continue;
-    secIdx++;
-    const section: AIImportSection = {
-      tempId: `sec-${secIdx}`,
-      name: raw.name,
-      description: typeof raw.description === 'string' ? raw.description : undefined,
-      action: 'create',
-      color: PREVIEW_COLORS[secIdx % PREVIEW_COLORS.length],
-      tasks: [],
-      selected: true,
-    };
-
-    const rawTasks = Array.isArray(raw.tasks) ? raw.tasks : [];
-    for (const rt of rawTasks) {
-      if (!rt.title || typeof rt.title !== 'string') continue;
-      taskIdx++;
-      const tags = (Array.isArray(rt.tags) ? rt.tags : []).map((t: string) => ({
-        name: String(t),
-        action: 'create' as const,
-      }));
-      const emails = (Array.isArray(rt.assigneeEmails) ? rt.assigneeEmails : []).map((e: string) => ({ email: String(e) }));
-      const subtasks = (Array.isArray(rt.subtasks) ? rt.subtasks : []).map((s: any) => ({
-        title: typeof s.title === 'string' ? s.title : String(s),
-      }));
-      section.tasks.push({
-        tempId: `task-${taskIdx}`,
-        title: rt.title,
-        description: typeof rt.description === 'string' ? rt.description : undefined,
-        section: section.name,
-        tags,
-        assignees: emails,
-        subtasks,
-        dueDate: typeof rt.dueDate === 'string' ? rt.dueDate : undefined,
-        startDate: typeof rt.startDate === 'string' ? rt.startDate : undefined,
-        selected: true,
-      });
-    }
-
-    preview.push(section);
-  }
-
-  return { preview, projectName };
+/** DeepSeek defaults to the cheap/fast model for imports; others keep their default. */
+function resolveImportModel(provider: string, requested: unknown): string | undefined {
+  if (typeof requested === 'string' && requested.trim().length > 0) return requested.trim();
+  return provider === 'deepseek' ? 'deepseek-flash' : undefined;
 }
 
 async function resolveAssignees(preview: AIImportSection[], userId: string) {
@@ -200,17 +130,29 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
       startDate: typeof startDate === 'string' ? startDate : undefined,
     });
     const userPrompt = buildUserPrompt(markdown.trim(), typeof projectName === 'string' ? projectName : undefined);
+    const controller = attachClientAbort(res);
+    const importModel = resolveImportModel(provider, model);
 
     const response = await ai.chat(
       [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      { model, temperature: 0.3, maxTokens: 8192 }
+      {
+        model: importModel,
+        temperature: 0.2,
+        maxTokens: 4096,
+        responseFormat: 'json_object',
+        effort: 'low',
+        signal: controller.signal,
+      }
     );
 
-    const parsed = await parseAIResponse(response.content, ai, model);
-    const { preview, projectName: generatedProjectName } = buildPreviewFromParsed(parsed);
+    const parsed = parseAIResponse(response.content);
+    const { preview, projectName: generatedProjectName } = buildPreviewFromParsed(
+      parsed,
+      context?.sections ?? []
+    );
 
     if (preview.length === 0) {
       res.status(400).json({ error: 'No valid sections could be extracted from the AI response' });
@@ -219,12 +161,19 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
 
     await resolveAssignees(preview, req.userId!);
 
-    const result: AIImportPreview = { sections: preview, projectName: generatedProjectName };
+    const result: AIImportPreview = {
+      sections: preview,
+      projectName: generatedProjectName,
+      ...(response.usage ? { usage: response.usage } : {}),
+    };
     res.json(result);
   } catch (error: any) {
+    if (res.destroyed || res.writableEnded) return;
     console.error('AI preview error:', error);
     const msg = error?.message || 'Internal server error';
-    if (msg.includes('not configured') || msg.includes('API key')) {
+    if (error instanceof AIResponseError) {
+      res.status(error.status).json({ error: msg });
+    } else if (msg.includes('not configured') || msg.includes('API key')) {
       res.status(400).json({ error: msg });
     } else {
       res.status(500).json({ error: msg });
@@ -270,6 +219,8 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
+    const controller = attachClientAbort(res);
+
     try {
       let context: {
         sections?: { id: string; name: string; color: string }[];
@@ -300,6 +251,8 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
         startDate: typeof startDate === 'string' ? startDate : undefined,
       });
       const userPrompt = buildUserPrompt(markdown.trim(), typeof projectName === 'string' ? projectName : undefined);
+      const importModel = resolveImportModel(provider, model);
+      let usage: { promptTokens: number; completionTokens: number } | undefined;
 
       let fullContent = '';
 
@@ -308,15 +261,26 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        { model, temperature: 0.3, maxTokens: 8192 }
+        {
+          model: importModel,
+          temperature: 0.2,
+          maxTokens: 4096,
+          responseFormat: 'json_object',
+          effort: 'low',
+          signal: controller.signal,
+          onUsage: (reported) => { usage = reported; },
+        }
       )) {
         fullContent += token;
         sendEvent({ token });
       }
 
       // Parse and build preview
-      const parsed = await parseAIResponse(fullContent, ai, model);
-      const { preview, projectName: generatedProjectName } = buildPreviewFromParsed(parsed);
+      const parsed = parseAIResponse(fullContent);
+      const { preview, projectName: generatedProjectName } = buildPreviewFromParsed(
+        parsed,
+        context?.sections ?? []
+      );
 
       if (preview.length === 0) {
         sendEvent({ error: 'No valid sections could be extracted from the AI response' });
@@ -326,10 +290,18 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
 
       await resolveAssignees(preview, req.userId!);
 
-      const result: AIImportPreview = { sections: preview, projectName: generatedProjectName };
-      sendEvent({ done: true, preview: result });
+      const result: AIImportPreview = {
+        sections: preview,
+        projectName: generatedProjectName,
+        ...(usage ? { usage } : {}),
+      };
+      sendEvent({ done: true, preview: result, ...(usage ? { usage } : {}) });
       res.end();
     } catch (innerError: any) {
+      if (controller.signal.aborted) {
+        res.end();
+        return;
+      }
       console.error('AI preview stream error:', innerError);
       sendEvent({ error: innerError?.message || 'Stream generation failed' });
       res.end();

@@ -35,6 +35,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: npm run test:ai
       - run: npm run test:crypto
       - run: npm run test:http
 

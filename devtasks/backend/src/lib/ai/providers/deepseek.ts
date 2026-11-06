@@ -1,3 +1,4 @@
+import { requestSignal } from '../abort';
 import type { AIProvider, AIConfig, ChatMessage, ChatOptions, ChatResponse } from '../types';
 
 export class DeepSeekProvider implements AIProvider {
@@ -16,8 +17,9 @@ export class DeepSeekProvider implements AIProvider {
         temperature: options?.temperature ?? 0.3,
         max_tokens: options?.maxTokens ?? 4096,
         response_format: options?.responseFormat === 'json_object' ? { type: 'json_object' } : undefined,
+        reasoning_effort: options?.effort,
       }),
-      signal: AbortSignal.timeout(60_000),
+      signal: requestSignal(120_000, options?.signal),
     });
 
     if (!res.ok) {
@@ -26,21 +28,18 @@ export class DeepSeekProvider implements AIProvider {
     }
 
     const data: any = await res.json();
-    console.log('[DeepSeek] Response:', JSON.stringify({ model: data.model, usage: data.usage, contentLen: data.choices?.[0]?.message?.content?.length }).slice(0, 300));
-
     const choice = data.choices?.[0];
     if (!choice?.message?.content) {
-      console.error('[DeepSeek] Empty response. Full data:', JSON.stringify(data).slice(0, 500));
-      throw new Error(`DeepSeek returned empty response. Finish reason: ${choice?.finish_reason || 'none'}. Raw: ${JSON.stringify(choice).slice(0, 300)}`);
+      throw new Error(`DeepSeek returned empty response. Finish reason: ${choice?.finish_reason || 'none'}`);
     }
 
-    return {
-      content: choice.message.content,
-      usage: data.usage ? {
-        promptTokens: data.usage.prompt_tokens,
-        completionTokens: data.usage.completion_tokens,
-      } : undefined,
-    };
+    const usage = data.usage ? {
+      promptTokens: data.usage.prompt_tokens,
+      completionTokens: data.usage.completion_tokens,
+    } : undefined;
+    if (usage) options?.onUsage?.(usage);
+
+    return { content: choice.message.content, usage };
   }
 
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {
@@ -55,9 +54,12 @@ export class DeepSeekProvider implements AIProvider {
         messages,
         temperature: options?.temperature ?? 0.3,
         max_tokens: options?.maxTokens ?? 4096,
+        response_format: options?.responseFormat === 'json_object' ? { type: 'json_object' } : undefined,
+        reasoning_effort: options?.effort,
         stream: true,
+        stream_options: { include_usage: true },
       }),
-      signal: AbortSignal.timeout(300_000),
+      signal: requestSignal(300_000, options?.signal),
     });
 
     if (!res.ok) {
@@ -81,6 +83,12 @@ export class DeepSeekProvider implements AIProvider {
         if (payload === '[DONE]') return;
         try {
           const json = JSON.parse(payload);
+          if (json.usage) {
+            options?.onUsage?.({
+              promptTokens: json.usage.prompt_tokens ?? 0,
+              completionTokens: json.usage.completion_tokens ?? 0,
+            });
+          }
           const delta = json.choices?.[0]?.delta?.content;
           if (delta) yield delta;
         } catch { /* skip malformed chunks */ }

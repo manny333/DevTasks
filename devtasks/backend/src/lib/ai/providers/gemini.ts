@@ -1,3 +1,4 @@
+import { requestSignal } from '../abort';
 import type { AIProvider, AIConfig, ChatMessage, ChatOptions, ChatResponse } from '../types';
 
 export class GeminiProvider implements AIProvider {
@@ -24,9 +25,10 @@ export class GeminiProvider implements AIProvider {
           generationConfig: {
             temperature: options?.temperature ?? 0.3,
             maxOutputTokens: options?.maxTokens ?? 4096,
+            ...(options?.responseFormat === 'json_object' ? { responseMimeType: 'application/json' } : {}),
           },
         }),
-        signal: AbortSignal.timeout(60_000),
+        signal: requestSignal(120_000, options?.signal),
       },
     );
 
@@ -39,13 +41,13 @@ export class GeminiProvider implements AIProvider {
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!content) throw new Error('Empty response from Gemini');
 
-    return {
-      content,
-      usage: data.usageMetadata ? {
-        promptTokens: data.usageMetadata.promptTokenCount,
-        completionTokens: data.usageMetadata.candidatesTokenCount,
-      } : undefined,
-    };
+    const usage = data.usageMetadata ? {
+      promptTokens: data.usageMetadata.promptTokenCount,
+      completionTokens: data.usageMetadata.candidatesTokenCount,
+    } : undefined;
+    if (usage) options?.onUsage?.(usage);
+
+    return { content, usage };
   }
 
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {

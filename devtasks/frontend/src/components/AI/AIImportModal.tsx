@@ -18,6 +18,7 @@ interface Provider {
   id: string;
   label: string;
   model: string;
+  models?: string[];
   hasKey: boolean;
   hasUserKey: boolean;
 }
@@ -54,6 +55,8 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
   const [markdown, setMarkdown] = useState('');
   const [providers, setProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState('');
+  const [selectedModel, setSelectedModel] = useState('');
+  const [usage, setUsage] = useState<{ promptTokens: number; completionTokens: number } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState('');
@@ -70,7 +73,10 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
       const list = res.data as Provider[];
       setProviders(list);
       const configured = list.find(p => p.hasKey);
-      setSelectedProvider(configured?.id || list[0]?.id || '');
+      const chosen = configured?.id || list[0]?.id || '';
+      setSelectedProvider(chosen);
+      const provider = list.find(p => p.id === chosen);
+      setSelectedModel(provider?.models?.[0] ?? provider?.model ?? '');
     }).catch(() => {});
   }, []);
 
@@ -85,6 +91,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
     setError('');
     setGenerating(true);
     setStreamingText('');
+    setUsage(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -101,6 +108,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
           markdown: markdown.trim(),
           projectId: projectId || undefined,
           provider: selectedProvider,
+          model: selectedModel || undefined,
           projectName: projectName.trim() || undefined,
           startDate: startDate || undefined,
         }),
@@ -130,6 +138,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
             const data = JSON.parse(line.slice(6));
             if (data.done) {
               setPreview(data.preview);
+              if (data.usage) setUsage(data.usage);
               if (data.preview.projectName && !projectName.trim()) {
                 setGeneratedProjectName(data.preview.projectName);
               }
@@ -198,7 +207,15 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
     reader.readAsText(file);
   };
 
-  const selectedHasKey = providers.find(p => p.id === selectedProvider)?.hasKey;
+  const selectedProviderData = providers.find(p => p.id === selectedProvider);
+  const selectedHasKey = selectedProviderData?.hasKey;
+  const availableModels = selectedProviderData?.models ?? (selectedProviderData ? [selectedProviderData.model] : []);
+
+  const changeProvider = (id: string) => {
+    setSelectedProvider(id);
+    const provider = providers.find(p => p.id === id);
+    setSelectedModel(provider?.models?.[0] ?? provider?.model ?? '');
+  };
 
   return (
     <div className="modal-overlay" ref={overlayRef}>
@@ -233,15 +250,28 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
           <div className="ai-input">
             <div className="ai-input-top">
               {providers.length > 0 ? (
-                <select className="ai-provider-select" value={selectedProvider} onChange={e => setSelectedProvider(e.target.value)}>
+                <select className="ai-provider-select" value={selectedProvider} onChange={e => changeProvider(e.target.value)}>
                   {providers.map(p => (
                     <option key={p.id} value={p.id}>
-                      {p.hasKey ? '● ' : '○ '}{p.label} ({p.model}){p.hasUserKey ? ` — ${t('settings.saved')}` : ''}
+                      {p.hasKey ? '● ' : '○ '}{p.label}{p.hasUserKey ? ` — ${t('settings.saved')}` : ''}
                     </option>
                   ))}
                 </select>
               ) : (
                 <span className="ai-no-provider">{t('ai.noProviders')}</span>
+              )}
+              {availableModels.length > 0 && (
+                <select
+                  className="ai-provider-select ai-model-select"
+                  value={selectedModel}
+                  onChange={e => setSelectedModel(e.target.value)}
+                  title={t('ai.model')}
+                  disabled={availableModels.length <= 1}
+                >
+                  {availableModels.map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
               )}
               <div className="ai-config-area">
                 {selectedHasKey ? (
@@ -303,6 +333,12 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
               )}
             </div>
 
+            {markdown.length > 6000 && (
+              <p className="ai-warning">
+                {t('ai.truncatedWarning', { chars: markdown.length.toLocaleString() })}
+              </p>
+            )}
+
             {generating && (
               <div className="ai-streaming-box">
                 <div className="ai-streaming-header">
@@ -331,6 +367,15 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
           <div className="ai-preview-wrap">
             {preview && (
               <AIImportPreview preview={preview} onChange={(sections) => setPreview({ sections })} />
+            )}
+            {usage && (
+              <p className="ai-usage">
+                {t('ai.tokensUsed', {
+                  total: (usage.promptTokens + usage.completionTokens).toLocaleString(),
+                  prompt: usage.promptTokens.toLocaleString(),
+                  completion: usage.completionTokens.toLocaleString(),
+                })}
+              </p>
             )}
             {error && <p className="ai-error">{error}</p>}
             <div className="ai-preview-actions">

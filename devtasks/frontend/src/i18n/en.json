@@ -257,7 +257,10 @@
     "configureKeys": "Configure",
     "projectName": "Project name",
     "projectNamePlaceholder": "Optional, AI will suggest if empty",
-    "startDate": "Start date"
+    "startDate": "Start date",
+    "model": "Model",
+    "tokensUsed": "{{total}} tokens used ({{prompt}} input + {{completion}} output)",
+    "truncatedWarning": "Only the first 6,000 characters will be processed (document: {{chars}} characters)."
   },
   "settings": {
     "title": "Settings",

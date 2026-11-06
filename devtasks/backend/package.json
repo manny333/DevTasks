@@ -17,7 +17,8 @@
     "test:runtime": "node scripts/authz-runtime.mjs",
     "test:crypto": "node scripts/crypto-check.mjs",
     "smoke:runtime": "node scripts/smoke-runtime.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:ai": "node scripts/ai-import-check.mjs"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +33,7 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "google-auth-library": "^10.6.2",
+    "jsonrepair": "^3.15.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
     "pg": "^8.20.0"

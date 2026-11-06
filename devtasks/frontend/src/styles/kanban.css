@@ -375,6 +375,9 @@
   padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--bg-secondary); color: var(--text-primary); font-size: 12px;
 }
+.ai-model-select { max-width: 190px; }
+.ai-warning { margin: 0; font-size: 11px; color: #f59e0b; }
+.ai-usage { margin: 8px 0 0; font-size: 11px; color: var(--text-muted); text-align: right; }
 .ai-textarea-wrap { position: relative; }
 .ai-textarea {
   width: 100%; min-height: 320px; padding: 14px; border-radius: 10px;
