@@ -39,6 +39,19 @@ class ImportError extends Error {
   }
 }
 
+/** Output budget for one import. Configurable, but bounded to avoid runaway cost. */
+const IMPORT_MAX_TOKENS = (() => {
+  const raw = Number(process.env.AI_IMPORT_MAX_TOKENS);
+  return Number.isFinite(raw) && raw >= 1024 && raw <= 8192 ? Math.trunc(raw) : 7168;
+})();
+
+const TRUNCATION_ERROR =
+  'AI output was truncated at the token limit. Split the document or raise AI_IMPORT_MAX_TOKENS.';
+
+function isTruncated(reason: string | undefined): boolean {
+  return Boolean(reason && ['length', 'max_tokens'].includes(reason.toLowerCase()));
+}
+
 /** Cancels the upstream AI request when the client disconnects or cancels. */
 function attachClientAbort(res: Response): AbortController {
   const controller = new AbortController();
@@ -141,12 +154,17 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
       {
         model: importModel,
         temperature: 0.2,
-        maxTokens: 4096,
+        maxTokens: IMPORT_MAX_TOKENS,
         responseFormat: 'json_object',
         effort: 'low',
         signal: controller.signal,
       }
     );
+
+    if (isTruncated(response.finishReason)) {
+      res.status(502).json({ error: TRUNCATION_ERROR });
+      return;
+    }
 
     const parsed = parseAIResponse(response.content);
     const { preview, projectName: generatedProjectName } = buildPreviewFromParsed(
@@ -253,6 +271,7 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
       const userPrompt = buildUserPrompt(markdown.trim(), typeof projectName === 'string' ? projectName : undefined);
       const importModel = resolveImportModel(provider, model);
       let usage: { promptTokens: number; completionTokens: number } | undefined;
+      let finishReason: string | undefined;
 
       let fullContent = '';
 
@@ -264,15 +283,22 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
         {
           model: importModel,
           temperature: 0.2,
-          maxTokens: 4096,
+          maxTokens: IMPORT_MAX_TOKENS,
           responseFormat: 'json_object',
           effort: 'low',
           signal: controller.signal,
           onUsage: (reported) => { usage = reported; },
+          onFinish: (reason) => { finishReason = reason; },
         }
       )) {
         fullContent += token;
         sendEvent({ token });
+      }
+
+      if (isTruncated(finishReason)) {
+        sendEvent({ error: TRUNCATION_ERROR });
+        res.end();
+        return;
       }
 
       // Parse and build preview

@@ -14,11 +14,14 @@ export interface ChatOptions {
   effort?: 'low' | 'high' | 'max';
   /** Reports provider usage, including for streaming responses. */
   onUsage?: (usage: { promptTokens: number; completionTokens: number }) => void;
+  /** Reports the provider finish reason (e.g. "length" when truncated). */
+  onFinish?: (reason: string | undefined) => void;
 }
 
 export interface ChatResponse {
   content: string;
   usage?: { promptTokens: number; completionTokens: number };
+  finishReason?: string;
 }
 
 export interface AIProvider {

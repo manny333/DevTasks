@@ -38,8 +38,9 @@ export class DeepSeekProvider implements AIProvider {
       completionTokens: data.usage.completion_tokens,
     } : undefined;
     if (usage) options?.onUsage?.(usage);
+    if (choice.finish_reason) options?.onFinish?.(choice.finish_reason);
 
-    return { content: choice.message.content, usage };
+    return { content: choice.message.content, usage, finishReason: choice.finish_reason };
   }
 
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {
@@ -89,6 +90,8 @@ export class DeepSeekProvider implements AIProvider {
               completionTokens: json.usage.completion_tokens ?? 0,
             });
           }
+          const finishReason = json.choices?.[0]?.finish_reason;
+          if (finishReason) options?.onFinish?.(finishReason);
           const delta = json.choices?.[0]?.delta?.content;
           if (delta) yield delta;
         } catch { /* skip malformed chunks */ }

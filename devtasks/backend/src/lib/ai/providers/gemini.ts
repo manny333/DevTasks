@@ -46,8 +46,10 @@ export class GeminiProvider implements AIProvider {
       completionTokens: data.usageMetadata.candidatesTokenCount,
     } : undefined;
     if (usage) options?.onUsage?.(usage);
+    const finishReason = data.candidates?.[0]?.finishReason;
+    if (finishReason) options?.onFinish?.(finishReason);
 
-    return { content, usage };
+    return { content, usage, finishReason };
   }
 
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {

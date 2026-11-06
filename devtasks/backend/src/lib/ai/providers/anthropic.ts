@@ -42,8 +42,9 @@ export class AnthropicProvider implements AIProvider {
       completionTokens: data.usage.output_tokens,
     } : undefined;
     if (usage) options?.onUsage?.(usage);
+    if (data.stop_reason) options?.onFinish?.(data.stop_reason);
 
-    return { content, usage };
+    return { content, usage, finishReason: data.stop_reason };
   }
 
   async *chatStream(messages: ChatMessage[], options?: ChatOptions): AsyncGenerator<string, void, undefined> {
