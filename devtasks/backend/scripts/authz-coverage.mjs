@@ -18,7 +18,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routesDir = path.join(root, 'src', 'routes');
 
 /** Files whose handlers are scoped to the authenticated user by construction. */
-const EXEMPT_FILES = new Set(['auth.ts', 'notifications.ts', 'userSettings.ts', 'search.ts']);
+const EXEMPT_FILES = new Set(['auth.ts', 'notifications.ts', 'userSettings.ts', 'search.ts', 'me.ts']);
 
 /** Individual handlers that legitimately need no project-level guard. */
 const EXEMPT_ROUTES = new Set([

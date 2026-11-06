@@ -20,6 +20,7 @@ import calendarRoutes from './routes/calendar';
 import aiRoutes from './routes/ai';
 import userSettingsRoutes from './routes/userSettings';
 import exportRoutes from './routes/export';
+import meRoutes from './routes/me';
 import { verifyUploadSignature, resolveUploadPath } from './lib/storage';
 import prisma from './lib/prisma';
 
@@ -98,6 +99,7 @@ app.use('/api/notifications', notificationRoutes); // /api/notifications
 app.use('/api/projects', calendarRoutes);  // /api/projects/:projectId/calendar
 app.use('/api/ai', aiRoutes);           // /api/ai/*
 app.use('/api/user', userSettingsRoutes); // /api/user/ai-keys
+app.use('/api/me', meRoutes);             // /api/me/tasks
 app.use('/api/projects', exportRoutes);  // /api/projects/:projectId/export
 
 // Health check

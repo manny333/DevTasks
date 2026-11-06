@@ -6,9 +6,9 @@ Built on the open MCP standard, so the same server works with Claude Code, Curso
 
 ## Features
 
-- **6 tools**: `list_projects`, `get_project`, `list_tasks`, `search`, `create_task`, `add_comment`.
-- **Resources**: `kanvy://projects` and `kanvy://projects/{slug}` (markdown summaries).
-- **Prompt**: `project_status_report` for a consistent status report.
+- **29 tools**: project/task reads, task lifecycle, planning, tags, members, dependencies and bulk creation.
+- **Resources**: `kanvy://me`, `kanvy://projects`, `kanvy://projects/{slug}`, `kanvy://projects/{slug}/board`, `kanvy://tasks/{taskId}`.
+- **Prompts**: `project_status_report`, `daily_standup`, `sprint_planning`, `triage_overdue`, `release_notes`.
 - **Transports**: stdio (default) and Streamable HTTP (`/mcp`).
 - **Safe by default**: writes can be disabled with `KANVY_ALLOW_WRITES=0`; HTTP is loopback-only unless a bearer token is configured.
 - No secrets in logs; every request authenticates against the Kanvy API with the user's token.
@@ -54,25 +54,62 @@ Or use the project-level `.mcp.json` at the repository root.
 
 ## Tools
 
-| Tool | Args | Writes |
-|---|---|---|
-| `list_projects` | — | no |
-| `get_project` | `slug` | no |
-| `list_tasks` | `sectionId`, `status?`, `archived?`, `limit?` | no |
-| `search` | `query`, `limit?` | no |
-| `create_task` | `sectionId`, `title`, `description?`, `status?`, `startDate?`, `dueDate?` | yes |
-| `add_comment` | `taskId`, `content` | yes |
+### Read
 
-Every tool returns compact markdown/text with ids so the agent can chain calls. Errors come back as `isError: true` with a readable message.
+| Tool | Args |
+|---|---|
+| `list_projects` | — |
+| `get_project` | `slug` |
+| `get_task` | `taskId` (full detail) |
+| `list_tasks` | `sectionId`, `status?`, `archived?`, `limit?` |
+| `list_comments` | `taskId`, `limit?` |
+| `list_members` | `projectSlug` |
+| `list_tags` | `projectSlug` |
+| `list_activity` | `taskId` |
+| `list_attachments` | `taskId` (signed URLs) |
+| `my_tasks` | `status?`, `limit?` |
+| `project_health` | `projectSlug` |
+| `agenda` | `projectSlug`, `from`, `to` |
+| `search` | `query`, `limit?` |
+| `whoami` | — |
+
+### Write (requires `KANVY_ALLOW_WRITES=1`)
+
+| Tool | Args |
+|---|---|
+| `create_project` | `name`, `description?`, `template?` |
+| `create_section` | `projectSlug`, `name`, `description?`, `color?` |
+| `create_task` | `sectionId`, `title`, `description?`, `status?`, `startDate?`, `dueDate?` |
+| `bulk_create_tasks` | `sectionId`, `tasks[]`, `dryRun?` (max 25) |
+| `update_task` | `taskId`, `title?`, `description?`, `startDate?`, `dueDate?` |
+| `move_task` | `taskId`, `status`, `position?` |
+| `archive_task` | `taskId`, `archived?` |
+| `add_comment` | `taskId`, `content` |
+| `add_subtask` | `taskId`, `title` |
+| `update_subtask` | `taskId`, `subtaskId`, `title?`, `completed?` |
+| `assign_task` | `taskId`, `email`, `accessType?` |
+| `create_tag` | `projectSlug`, `name`, `color?` |
+| `add_tag` | `taskId`, `tagId` |
+| `add_member` | `projectSlug`, `email`, `accessType?` |
+| `add_dependency` | `taskId`, `dependsOnId` |
+
+Every tool returns compact markdown/text with ids so the agent can chain calls. Errors come back as `isError: true` with a readable message. Destructive or bulk operations should be confirmed by the user; `bulk_create_tasks` supports `dryRun`.
 
 ### Resources
 
+- `kanvy://me` — authenticated user.
 - `kanvy://projects` — overview of accessible projects.
 - `kanvy://projects/{slug}` — sections, task counts and tags of one project.
+- `kanvy://projects/{slug}/board` — sections and compact task lines.
+- `kanvy://tasks/{taskId}` — full task detail.
 
 ### Prompts
 
-- `project_status_report` with `projectSlug` — asks the agent to build a report using `get_project` and `list_tasks`.
+- `project_status_report` — project status using `get_project`, `project_health` and `list_tasks`.
+- `daily_standup` — my tasks, blockers and next steps.
+- `sprint_planning` — backlog review and sprint proposal.
+- `triage_overdue` — overdue/blocked work and recovery plan.
+- `release_notes` — release notes from completed tasks.
 
 ## Client setup
 

@@ -15,6 +15,57 @@ const STATUS_ORDER: Record<string, number> = {
   DONE: 3,
 };
 
+// GET /api/tasks/:id — full task detail
+router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      include: {
+        section: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            project: { select: { id: true, name: true, slug: true } },
+          },
+        },
+        tags: { include: { tag: true } },
+        assignees: {
+          include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+        },
+        subtasks: { orderBy: { position: 'asc' } },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          take: 100,
+          include: { author: { select: { id: true, name: true, avatar: true } } },
+        },
+        blockedBy: {
+          include: { dependsOn: { select: { id: true, title: true, status: true } } },
+        },
+        blocks: {
+          include: { task: { select: { id: true, title: true, status: true } } },
+        },
+        attachments: {
+          select: { id: true, filename: true, mimeType: true, size: true, createdAt: true },
+        },
+        _count: { select: { comments: true, subtasks: true, attachments: true } },
+      },
+    });
+
+    if (!task) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+
+    res.json(task);
+  } catch (error) {
+    console.error('Get task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // PATCH /api/tasks/:id — update task
 router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {

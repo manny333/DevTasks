@@ -53,6 +53,19 @@ const tasks = [
   },
 ];
 
+const user = { id: 'u1', name: 'Emmanuel', email: 'emmanuel@example.com' };
+
+const taskDetail = {
+  ...tasks[0],
+  section: { id: 'sec1', name: 'Backlog', project: { id: 'p1', name: 'Demo Project', slug: 'demo' } },
+  subtasks: [{ id: 'st1', title: 'First subtask', completed: true }],
+  comments: [{ id: 'c1', content: 'Looks good', createdAt: '2026-11-01T00:00:00.000Z', author: { name: 'Emmanuel' } }],
+  blockedBy: [],
+  blocks: [],
+  attachments: [],
+  _count: { comments: 1, subtasks: 1, attachments: 0 },
+};
+
 function sendJson(res, status, body) {
   res.writeHead(status, { 'content-type': 'application/json' });
   res.end(JSON.stringify(body));
@@ -101,6 +114,42 @@ const apiServer = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && path === '/api/tasks/task1') {
+    sendJson(res, 200, taskDetail);
+    return;
+  }
+  if (req.method === 'PATCH' && path === '/api/tasks/task1') {
+    const body = await readBody(req);
+    sendJson(res, 200, { ...taskDetail, ...body });
+    return;
+  }
+  if (req.method === 'PATCH' && path === '/api/tasks/task1/move') {
+    const body = await readBody(req);
+    sendJson(res, 200, { ...taskDetail, status: body.status });
+    return;
+  }
+  if (req.method === 'GET' && path === '/api/me/tasks') {
+    sendJson(res, 200, [{ ...tasks[0], section: { id: 'sec1', name: 'Backlog', project: { id: 'p1', name: 'Demo Project', slug: 'demo' } } }]);
+    return;
+  }
+  if (req.method === 'GET' && path === '/api/auth/me') {
+    sendJson(res, 200, user);
+    return;
+  }
+  if (req.method === 'GET' && path === '/api/projects/p1/tags') {
+    sendJson(res, 200, [{ id: 'tag1', name: 'backend', color: '#000000' }]);
+    return;
+  }
+  if (req.method === 'GET' && path === '/api/projects/p1/members') {
+    sendJson(res, 200, [{ id: 'm1', role: 'OWNER', accessType: 'FULL', user }]);
+    return;
+  }
+  if (req.method === 'POST' && path === '/api/tasks/task1/subtasks') {
+    const body = await readBody(req);
+    sendJson(res, 201, { id: 'st2', title: body.title, completed: false });
+    return;
+  }
+
   sendJson(res, 404, { error: `No mock for ${req.method} ${path}` });
 });
 
@@ -132,7 +181,7 @@ try {
 
   const tools = await client.listTools();
   const toolNames = tools.tools.map((tool) => tool.name).sort();
-  check('lists 6 tools', toolNames.length === 6, toolNames.join(', '));
+  check('lists 29 tools', toolNames.length === 29, `${toolNames.length}: ${toolNames.join(', ')}`);
 
   const projectsResult = await client.callTool({ name: 'list_projects', arguments: {} });
   check('list_projects returns the project', textOf(projectsResult).includes('Demo Project'));
@@ -157,6 +206,27 @@ try {
     arguments: { taskId: 'task1', content: 'Looks good' },
   });
   check('add_comment writes', textOf(comment).includes('Comment added'));
+
+  const detail = await client.callTool({ name: 'get_task', arguments: { taskId: 'task1' } });
+  check('get_task returns full detail', textOf(detail).includes('## Subtasks (1)'));
+
+  const myTasks = await client.callTool({ name: 'my_tasks', arguments: {} });
+  check('my_tasks lists assigned work', textOf(myTasks).includes('My tasks'));
+
+  const who = await client.callTool({ name: 'whoami', arguments: {} });
+  check('whoami identifies the user', textOf(who).includes('emmanuel@example.com'));
+
+  const health = await client.callTool({ name: 'project_health', arguments: { projectSlug: 'demo' } });
+  check('project_health summarizes the project', textOf(health).includes('Completion'));
+
+  const tags = await client.callTool({ name: 'list_tags', arguments: { projectSlug: 'demo' } });
+  check('list_tags returns tag ids', textOf(tags).includes('backend'));
+
+  const updated = await client.callTool({
+    name: 'update_task',
+    arguments: { taskId: 'task1', title: 'Renamed task' },
+  });
+  check('update_task writes', textOf(updated).includes('Updated task'));
 
   const resources = await client.listResources();
   check('lists the projects resource', resources.resources.some((r) => r.uri === 'kanvy://projects'));
