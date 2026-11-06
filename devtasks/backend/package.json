@@ -16,6 +16,7 @@
     "test:http": "node scripts/authz-runtime-offline.mjs",
     "test:runtime": "node scripts/authz-runtime.mjs",
     "test:crypto": "node scripts/crypto-check.mjs",
+    "mcp:token": "node scripts/mcp-token.mjs",
     "smoke:runtime": "node scripts/smoke-runtime.mjs",
     "typecheck": "tsc --noEmit",
     "test:ai": "node scripts/ai-import-check.mjs"

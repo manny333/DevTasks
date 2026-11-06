@@ -16,7 +16,7 @@ Built on the open MCP standard, so the same server works with Claude Code, Curso
 ## Requirements
 
 - Node.js **20+**
-- A running Kanvy API and a JWT for it (the same token the web app uses, valid 7 days).
+- A running Kanvy API and a Kanvy token.
 
 ## Quick start
 
@@ -24,16 +24,19 @@ Built on the open MCP standard, so the same server works with Claude Code, Curso
 cd devtasks/mcp-server
 npm install
 npm run build
-cp .env.example .env      # fill KANVY_TOKEN
 
-# stdio (what MCP clients spawn)
-node build/index.js
+# stdio wrapper: discovers the token automatically
+node scripts/stdio.mjs
 ```
+
+The wrapper reads `KANVY_TOKEN`, then `KANVY_TOKEN_FILE`, then
+`~/.dsh/storages/kanvy/token`. You can also run `node build/index.js` directly
+with `KANVY_TOKEN` exported.
 
 Test the connection from Claude Code:
 
 ```bash
-claude mcp add --env KANVY_TOKEN=$KANVY_TOKEN --transport stdio kanvy -- node "$(pwd)/build/index.js"
+claude mcp add --transport stdio kanvy -- node "$(pwd)/scripts/stdio.mjs"
 claude mcp list
 ```
 
@@ -44,7 +47,8 @@ Or use the project-level `.mcp.json` at the repository root.
 | Variable | Default | Description |
 |---|---|---|
 | `KANVY_API_URL` | `http://localhost:5001/api` | Kanvy API base URL |
-| `KANVY_TOKEN` | — (required) | JWT for the Kanvy API |
+| `KANVY_TOKEN` | — | JWT for the Kanvy API; optional when using `scripts/stdio.mjs`, which discovers it automatically |
+| `KANVY_TOKEN_FILE` | — | Explicit token file for the stdio wrapper |
 | `KANVY_ALLOW_WRITES` | `1` | `0` disables `create_task` and `add_comment` |
 | `KANVY_TIMEOUT_MS` | `15000` | Upstream request timeout |
 | `MCP_TRANSPORT` | `stdio` | `stdio` or `http` |
@@ -117,10 +121,13 @@ The server is client-agnostic; only the configuration file changes.
 
 ### Claude Code
 
+The recommended setup uses the stdio wrapper, which discovers the token from
+the conventional token file. No token needs to be copied into the config.
+
 Local scope (just you, this project):
 
-```bash
-claude mcp add --env KANVY_TOKEN=$KANVY_TOKEN --transport stdio kanvy -- node /absolute/path/to/devtasks/mcp-server/build/index.js
+```powershell
+claude mcp add --transport stdio kanvy -- node C:\absolute\path\to\devtasks\mcp-server\scripts\stdio.mjs
 ```
 
 Project scope (team, committed `.mcp.json`):
@@ -131,16 +138,32 @@ Project scope (team, committed `.mcp.json`):
     "kanvy": {
       "type": "stdio",
       "command": "node",
-      "args": ["devtasks/mcp-server/build/index.js"],
+      "args": ["devtasks/mcp-server/scripts/stdio.mjs"],
       "env": {
         "KANVY_API_URL": "http://localhost:5001/api",
-        "KANVY_TOKEN": "${KANVY_TOKEN}",
         "KANVY_ALLOW_WRITES": "1"
       }
     }
   }
 }
 ```
+
+Token resolution order:
+
+1. `KANVY_TOKEN`
+2. `KANVY_TOKEN_FILE`
+3. `~/.dsh/storages/kanvy/token` (local DSH install)
+4. `~/.kanvy/token`
+
+To refresh the local token without opening the browser:
+
+```powershell
+cd devtasks/backend
+npm run mcp:token -- emhernandez@sismex.com
+```
+
+The command writes a 90-day token to `~/.dsh/storages/kanvy/token` and never
+prints it. On another machine, create the token there or set `KANVY_TOKEN`.
 
 ### Cursor
 
