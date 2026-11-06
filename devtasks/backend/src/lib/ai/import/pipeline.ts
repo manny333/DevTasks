@@ -79,13 +79,14 @@ async function processChunk(
   depth: number,
   options: PipelineOptions,
   knownSections: string[],
-  projectName?: string
+  projectName: string | undefined,
+  taskBudget: number
 ): Promise<ChunkResult> {
   if (options.signal?.aborted) throw abortError();
 
   const systemPrompt = buildSystemPrompt(options.context, {
     startDate: options.startDate,
-    maxTasks: options.limits.maxTasksPerChunk,
+    maxTasks: taskBudget,
     maxSections: options.limits.maxSectionsPerChunk,
     knownSections,
     chunk: {
@@ -138,14 +139,16 @@ async function processChunk(
       depth + 1,
       options,
       knownSections,
-      projectName
+      projectName,
+      Math.max(10, Math.ceil(taskBudget / 2))
     );
     const rightResult = await processChunk(
       { ...chunk, text: right, estimatedTasks: chunk.estimatedTasks },
       depth + 1,
       options,
       knownSections,
-      projectName
+      projectName,
+      Math.max(10, Math.ceil(taskBudget / 2))
     );
 
     return {
@@ -183,8 +186,16 @@ export async function runImportPipeline(options: PipelineOptions): Promise<Pipel
   for (const chunk of options.plan.chunks) {
     if (options.signal?.aborted) throw abortError();
 
+    const generatedTasks = previews.reduce(
+      (sum, preview) => sum + preview.sections.reduce((inner, section) => inner + section.tasks.length, 0),
+      0
+    );
+    const remaining = Math.max(1, options.limits.maxTasks - generatedTasks);
+    const desired = Math.max(25, chunk.estimatedTasks + 5);
+    const taskBudget = Math.min(options.limits.maxTasksPerChunk, remaining, desired);
+
     options.onProgress?.({ chunk: chunk.index + 1, total: options.plan.chunks.length });
-    const result = await processChunk(chunk, 0, options, [...knownSections], projectName);
+    const result = await processChunk(chunk, 0, options, [...knownSections], projectName, taskBudget);
     chunksProcessed++;
 
     previews.push(...result.previews);

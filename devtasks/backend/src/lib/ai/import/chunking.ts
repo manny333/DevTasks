@@ -206,7 +206,7 @@ export function planImport(markdown: string, limits: ImportLimits): ImportPlan {
     totalChars: source.length,
     estimatedTasks,
     estimatedTokens,
-    requiresConfirmation: chunks.length > 1 || estimatedTasks > limits.maxTasksPerChunk,
+    requiresConfirmation: chunks.length > 1 || estimatedTasks > 25,
     warnings,
   };
 }

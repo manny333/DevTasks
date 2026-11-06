@@ -38,7 +38,7 @@ export function getImportLimits(env: NodeJS.ProcessEnv = process.env): ImportLim
     maxTasks: intFromEnv(env, 'AI_IMPORT_MAX_TASKS', 150, 1, 500),
     chunkChars: intFromEnv(env, 'AI_IMPORT_CHUNK_CHARS', 6_000, 2_000, 12_000),
     maxOutputTokens: intFromEnv(env, 'AI_IMPORT_MAX_TOKENS', 7_168, 1_024, 8_192),
-    maxTasksPerChunk: intFromEnv(env, 'AI_IMPORT_TASKS_PER_CHUNK', 25, 5, 50),
+    maxTasksPerChunk: intFromEnv(env, 'AI_IMPORT_TASKS_PER_CHUNK', 40, 5, 60),
     maxSectionsPerChunk: intFromEnv(env, 'AI_IMPORT_SECTIONS_PER_CHUNK', 6, 1, 12),
   };
 }
