@@ -5,9 +5,10 @@ import { createProvider, getAvailableProviders } from '../lib/ai/factory';
 import { ensureProjectAccess } from '../lib/access';
 import { getDecryptedUserApiKey } from '../lib/userApiKeys';
 import { rateLimit } from '../lib/rateLimit';
-import { buildSystemPrompt, buildUserPrompt } from '../lib/ai/prompts';
-import { AIResponseError, buildPreviewFromParsed, parseAIResponse } from '../lib/ai/preview';
-import type { AIImportPreview, AIImportSection } from '../lib/ai/types';
+import { planImport } from '../lib/ai/import/chunking';
+import { getImportLimits, ImportLimitError } from '../lib/ai/import/limits';
+import { runImportPipeline, toPublicPlan, type ImportContext } from '../lib/ai/import/pipeline';
+import type { AIImportSection } from '../lib/ai/types';
 
 const router = Router();
 router.use(authMiddleware);
@@ -29,6 +30,26 @@ router.get('/providers', async (req: AuthRequest, res: Response) => {
   res.json(getAvailableProviders(userKeys));
 });
 
+// POST /api/ai/plan — token-free preflight: block count, estimated tasks/tokens
+router.post('/plan', async (req: AuthRequest, res: Response) => {
+  try {
+    const { markdown, projectId } = req.body;
+    if (!markdown || typeof markdown !== 'string' || markdown.trim().length === 0) {
+      res.status(400).json({ error: 'markdown is required' });
+      return;
+    }
+    if (projectId && !await ensureProjectAccess(req.userId!, projectId as string, res, false)) return;
+    const limits = getImportLimits();
+    const plan = planImport(markdown, limits);
+    res.json(toPublicPlan(plan, limits));
+  } catch (error) {
+    if (!planErrorResponse(res, error)) {
+      console.error('AI plan error:', error);
+      res.status(500).json({ error: 'Could not plan the import' });
+    }
+  }
+});
+
 // ─── Shared helpers ──────────────────────────────────────────────────
 
 /** Validation error that must reach the client as 4xx, not as a 500. */
@@ -37,19 +58,6 @@ class ImportError extends Error {
     super(message);
     this.name = 'ImportError';
   }
-}
-
-/** Output budget for one import. Configurable, but bounded to avoid runaway cost. */
-const IMPORT_MAX_TOKENS = (() => {
-  const raw = Number(process.env.AI_IMPORT_MAX_TOKENS);
-  return Number.isFinite(raw) && raw >= 1024 && raw <= 8192 ? Math.trunc(raw) : 7168;
-})();
-
-const TRUNCATION_ERROR =
-  'AI output was truncated at the token limit. Split the document or raise AI_IMPORT_MAX_TOKENS.';
-
-function isTruncated(reason: string | undefined): boolean {
-  return Boolean(reason && ['length', 'max_tokens'].includes(reason.toLowerCase()));
 }
 
 /** Cancels the upstream AI request when the client disconnects or cancels. */
@@ -68,6 +76,48 @@ function attachClientAbort(res: Response): AbortController {
 function resolveImportModel(provider: string, requested: unknown): string | undefined {
   if (typeof requested === 'string' && requested.trim().length > 0) return requested.trim();
   return provider === 'deepseek' ? 'deepseek-flash' : undefined;
+}
+
+async function resolveApiKey(userId: string, provider: string, provided: unknown): Promise<string | undefined> {
+  if (typeof provided === 'string' && provided.trim()) return provided;
+  const userKey = await getDecryptedUserApiKey(userId, provider);
+  if (userKey) return userKey;
+  return process.env[`AI_${provider.toUpperCase()}_API_KEY`];
+}
+
+async function loadProjectContext(projectId?: string): Promise<ImportContext | undefined> {
+  if (!projectId) return undefined;
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    include: {
+      sections: { select: { id: true, name: true, color: true } },
+      tags: { select: { id: true, name: true, color: true } },
+      members: { include: { user: { select: { id: true, name: true, email: true } } } },
+    },
+  });
+  if (!project) return undefined;
+  return {
+    sections: project.sections,
+    tags: project.tags,
+    members: project.members.map((member) => ({
+      id: member.user.id,
+      name: member.user.name,
+      email: member.user.email,
+    })),
+  };
+}
+
+function planErrorResponse(res: Response, error: unknown): boolean {
+  if (error instanceof ImportLimitError) {
+    res.status(error.status).json({ error: error.message, code: error.code });
+    return true;
+  }
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status === 'number') {
+    res.status(status).json({ error: error instanceof Error ? error.message : 'Import failed' });
+    return true;
+  }
+  return false;
 }
 
 async function resolveAssignees(preview: AIImportSection[], userId: string) {
@@ -138,60 +188,42 @@ router.post('/preview', async (req: AuthRequest, res: Response): Promise<void> =
       }
     }
 
+    const limits = getImportLimits();
+    const plan = planImport(markdown, limits);
     const ai = createProvider(provider, resolvedApiKey, baseUrl);
-    const systemPrompt = buildSystemPrompt(context, {
-      startDate: typeof startDate === 'string' ? startDate : undefined,
-    });
-    const userPrompt = buildUserPrompt(markdown.trim(), typeof projectName === 'string' ? projectName : undefined);
     const controller = attachClientAbort(res);
     const importModel = resolveImportModel(provider, model);
 
-    const response = await ai.chat(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      {
-        model: importModel,
-        temperature: 0.2,
-        maxTokens: IMPORT_MAX_TOKENS,
-        responseFormat: 'json_object',
-        effort: 'low',
-        signal: controller.signal,
-      }
-    );
+    const result = await runImportPipeline({
+      plan,
+      ai,
+      limits,
+      ...(importModel ? { model: importModel } : {}),
+      ...(typeof startDate === 'string' ? { startDate } : {}),
+      ...(typeof projectName === 'string' && projectName.trim() ? { projectName: projectName.trim() } : {}),
+      signal: controller.signal,
+      ...(context ? { context } : {}),
+      stream: false,
+    });
 
-    if (isTruncated(response.finishReason)) {
-      res.status(502).json({ error: TRUNCATION_ERROR });
-      return;
-    }
-
-    const parsed = parseAIResponse(response.content);
-    const { preview, projectName: generatedProjectName } = buildPreviewFromParsed(
-      parsed,
-      context?.sections ?? []
-    );
-
-    if (preview.length === 0) {
+    if (result.preview.sections.length === 0) {
       res.status(400).json({ error: 'No valid sections could be extracted from the AI response' });
       return;
     }
 
-    await resolveAssignees(preview, req.userId!);
+    await resolveAssignees(result.preview.sections, req.userId!);
 
-    const result: AIImportPreview = {
-      sections: preview,
-      projectName: generatedProjectName,
-      ...(response.usage ? { usage: response.usage } : {}),
-    };
-    res.json(result);
+    res.json({
+      ...result.preview,
+      usage: result.usage,
+      chunks: result.chunksProcessed,
+    });
   } catch (error: any) {
     if (res.destroyed || res.writableEnded) return;
+    if (planErrorResponse(res, error)) return;
     console.error('AI preview error:', error);
     const msg = error?.message || 'Internal server error';
-    if (error instanceof AIResponseError) {
-      res.status(error.status).json({ error: msg });
-    } else if (msg.includes('not configured') || msg.includes('API key')) {
+    if (msg.includes('not configured') || msg.includes('API key')) {
       res.status(400).json({ error: msg });
     } else {
       res.status(500).json({ error: msg });
@@ -226,6 +258,9 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    const limits = getImportLimits();
+    const plan = planImport(markdown, limits);
+
     // Set up SSE
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -237,91 +272,42 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
       res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
+    sendEvent({ plan: toPublicPlan(plan, limits) });
     const controller = attachClientAbort(res);
 
     try {
-      let context: {
-        sections?: { id: string; name: string; color: string }[];
-        tags?: { id: string; name: string; color: string }[];
-        members?: { id: string; name: string; email: string }[];
-      } | undefined;
-
-      if (projectId) {
-        const project = await prisma.project.findUnique({
-          where: { id: projectId as string },
-          include: {
-            sections: { select: { id: true, name: true, color: true } },
-            tags: { select: { id: true, name: true, color: true } },
-            members: { include: { user: { select: { id: true, name: true, email: true } } } },
-          },
-        });
-        if (project) {
-          context = {
-            sections: project.sections,
-            tags: project.tags,
-            members: project.members.map(m => ({ id: m.user.id, name: m.user.name, email: m.user.email })),
-          };
-        }
-      }
-
+      const context = await loadProjectContext(typeof projectId === 'string' ? projectId : undefined);
       const ai = createProvider(provider, resolvedApiKey, baseUrl);
-      const systemPrompt = buildSystemPrompt(context, {
-        startDate: typeof startDate === 'string' ? startDate : undefined,
-      });
-      const userPrompt = buildUserPrompt(markdown.trim(), typeof projectName === 'string' ? projectName : undefined);
       const importModel = resolveImportModel(provider, model);
-      let usage: { promptTokens: number; completionTokens: number } | undefined;
-      let finishReason: string | undefined;
 
-      let fullContent = '';
+      const result = await runImportPipeline({
+        plan,
+        ai,
+        limits,
+        ...(importModel ? { model: importModel } : {}),
+        ...(typeof startDate === 'string' ? { startDate } : {}),
+        ...(typeof projectName === 'string' && projectName.trim() ? { projectName: projectName.trim() } : {}),
+        signal: controller.signal,
+        ...(context ? { context } : {}),
+        stream: true,
+        ...(plan.chunks.length === 1 ? { onToken: (token: string) => sendEvent({ token }) } : {}),
+        onProgress: (progress) => sendEvent({ progress }),
+      });
 
-      for await (const token of ai.chatStream(
-        [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        {
-          model: importModel,
-          temperature: 0.2,
-          maxTokens: IMPORT_MAX_TOKENS,
-          responseFormat: 'json_object',
-          effort: 'low',
-          signal: controller.signal,
-          onUsage: (reported) => { usage = reported; },
-          onFinish: (reason) => { finishReason = reason; },
-        }
-      )) {
-        fullContent += token;
-        sendEvent({ token });
-      }
-
-      if (isTruncated(finishReason)) {
-        sendEvent({ error: TRUNCATION_ERROR });
-        res.end();
-        return;
-      }
-
-      // Parse and build preview
-      const parsed = parseAIResponse(fullContent);
-      const { preview, projectName: generatedProjectName } = buildPreviewFromParsed(
-        parsed,
-        context?.sections ?? []
-      );
-
-      if (preview.length === 0) {
+      if (result.preview.sections.length === 0) {
         sendEvent({ error: 'No valid sections could be extracted from the AI response' });
         res.end();
         return;
       }
 
-      await resolveAssignees(preview, req.userId!);
+      await resolveAssignees(result.preview.sections, req.userId!);
 
-      const result: AIImportPreview = {
-        sections: preview,
-        projectName: generatedProjectName,
-        ...(usage ? { usage } : {}),
-      };
-      sendEvent({ done: true, preview: result, ...(usage ? { usage } : {}) });
+      sendEvent({
+        done: true,
+        preview: { ...result.preview, usage: result.usage },
+        usage: result.usage,
+        chunks: result.chunksProcessed,
+      });
       res.end();
     } catch (innerError: any) {
       if (controller.signal.aborted) {
@@ -329,13 +315,16 @@ router.post('/preview/stream', async (req: AuthRequest, res: Response): Promise<
         return;
       }
       console.error('AI preview stream error:', innerError);
-      sendEvent({ error: innerError?.message || 'Stream generation failed' });
+      sendEvent({
+        error: innerError?.message || 'Stream generation failed',
+        ...(innerError instanceof ImportLimitError ? { code: innerError.code } : {}),
+      });
       res.end();
     }
   } catch (error: any) {
     console.error('AI preview stream setup error:', error);
-    // If headers haven't been sent yet, send JSON error
     if (!res.headersSent) {
+      if (planErrorResponse(res, error)) return;
       const msg = error?.message || 'Internal server error';
       if (msg.includes('not configured') || msg.includes('API key')) {
         res.status(400).json({ error: msg });

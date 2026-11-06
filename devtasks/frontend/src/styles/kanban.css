@@ -378,6 +378,13 @@
 .ai-model-select { max-width: 190px; }
 .ai-warning { margin: 0; font-size: 11px; color: #f59e0b; }
 .ai-usage { margin: 8px 0 0; font-size: 11px; color: var(--text-muted); text-align: right; }
+.ai-confirm {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg-secondary);
+}
+.ai-confirm-text { margin: 0; font-size: 12px; color: var(--text-primary); }
+.ai-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .ai-textarea-wrap { position: relative; }
 .ai-textarea {
   width: 100%; min-height: 320px; padding: 14px; border-radius: 10px;

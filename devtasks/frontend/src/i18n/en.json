@@ -260,7 +260,10 @@
     "startDate": "Start date",
     "model": "Model",
     "tokensUsed": "{{total}} tokens used ({{prompt}} input + {{completion}} output)",
-    "truncatedWarning": "Only the first 6,000 characters will be processed (document: {{chars}} characters)."
+    "planning": "Planning...",
+    "planSummary": "This document will be processed in {{chunks}} block(s), generating about {{tasks}} tasks (~{{tokens}} tokens estimated).",
+    "continue": "Continue",
+    "progress": "Processing block {{current}} of {{total}}..."
   },
   "settings": {
     "title": "Settings",

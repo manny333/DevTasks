@@ -23,6 +23,18 @@ interface Provider {
   hasUserKey: boolean;
 }
 
+interface ImportPlan {
+  chunks: number;
+  totalChars: number;
+  estimatedTasks: number;
+  estimatedTokens: number;
+  requiresConfirmation: boolean;
+  warnings: string[];
+  maxTasks: number;
+  maxChunks: number;
+  chunkChars: number;
+}
+
 interface PreviewTask {
   tempId: string;
   title: string;
@@ -57,6 +69,10 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
   const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
   const [usage, setUsage] = useState<{ promptTokens: number; completionTokens: number } | null>(null);
+  const [plan, setPlan] = useState<ImportPlan | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [planning, setPlanning] = useState(false);
+  const [progress, setProgress] = useState<{ chunk: number; total: number } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [error, setError] = useState('');
@@ -86,12 +102,13 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  const generate = async () => {
+  const runGeneration = async () => {
     if (!markdown.trim()) return;
     setError('');
     setGenerating(true);
     setStreamingText('');
     setUsage(null);
+    setProgress(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -136,6 +153,8 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
           if (!line.startsWith('data: ')) continue;
           try {
             const data = JSON.parse(line.slice(6));
+            if (data.plan) setPlan(data.plan);
+            if (data.progress) setProgress(data.progress);
             if (data.done) {
               setPreview(data.preview);
               if (data.usage) setUsage(data.usage);
@@ -156,7 +175,31 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
       setError(getApiErrorMessage(err, t('ai.errorGenerate')));
     } finally {
       setGenerating(false);
+      setProgress(null);
       abortRef.current = null;
+    }
+  };
+
+  const generate = async () => {
+    if (!markdown.trim()) return;
+    setError('');
+    setPlanning(true);
+    try {
+      const response = await api.post('/ai/plan', {
+        markdown: markdown.trim(),
+        projectId: projectId || undefined,
+      });
+      const nextPlan = response.data as ImportPlan;
+      setPlan(nextPlan);
+      if (nextPlan.requiresConfirmation) {
+        setConfirming(true);
+        return;
+      }
+      await runGeneration();
+    } catch (err) {
+      setError(getApiErrorMessage(err, t('ai.errorGenerate')));
+    } finally {
+      setPlanning(false);
     }
   };
 
@@ -164,6 +207,7 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
     abortRef.current?.abort();
     setGenerating(false);
     setStreamingText('');
+    setProgress(null);
   };
 
   const applyImport = async () => {
@@ -305,6 +349,29 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
               </div>
             </div>
 
+            {confirming && plan && (
+              <div className="ai-confirm">
+                <p className="ai-confirm-text">
+                  {t('ai.planSummary', {
+                    chunks: plan.chunks,
+                    tasks: plan.estimatedTasks,
+                    tokens: plan.estimatedTokens.toLocaleString(),
+                  })}
+                </p>
+                {plan.warnings.map((warning, index) => (
+                  <p key={index} className="ai-warning">{warning}</p>
+                ))}
+                <div className="ai-confirm-actions">
+                  <button className="btn-secondary" onClick={() => { setConfirming(false); setPlan(null); }}>
+                    {t('common.cancel')}
+                  </button>
+                  <button className="btn-primary" onClick={() => { setConfirming(false); void runGeneration(); }}>
+                    {t('ai.continue')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div
               className="ai-textarea-wrap"
               onDragOver={e => e.preventDefault()}
@@ -333,17 +400,15 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
               )}
             </div>
 
-            {markdown.length > 6000 && (
-              <p className="ai-warning">
-                {t('ai.truncatedWarning', { chars: markdown.length.toLocaleString() })}
-              </p>
-            )}
-
             {generating && (
               <div className="ai-streaming-box">
                 <div className="ai-streaming-header">
                   <span className="ai-spinner" />
-                  <span>{t('ai.generating')}</span>
+                  <span>
+                    {progress
+                      ? t('ai.progress', { current: progress.chunk, total: progress.total })
+                      : t('ai.generating')}
+                  </span>
                 </div>
                 <pre className="ai-streaming-content">{streamingText || ' '}</pre>
               </div>
@@ -357,8 +422,12 @@ export default function AIImportModal({ projectId, onClose, onImported }: Props)
                   {t('common.cancel')}
                 </button>
               ) : (
-                <button className="btn-primary" onClick={generate} disabled={!markdown.trim() || !selectedHasKey}>
-                  {t('ai.generate')}
+                <button
+                  className="btn-primary"
+                  onClick={generate}
+                  disabled={!markdown.trim() || !selectedHasKey || planning || confirming}
+                >
+                  {planning ? t('ai.planning') : t('ai.generate')}
                 </button>
               )}
             </div>

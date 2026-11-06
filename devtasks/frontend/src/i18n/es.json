@@ -241,7 +241,10 @@
     "startDate": "Fecha de inicio",
     "model": "Modelo",
     "tokensUsed": "{{total}} tokens usados ({{prompt}} de entrada + {{completion}} de salida)",
-    "truncatedWarning": "Solo se procesarán los primeros 6.000 caracteres (documento: {{chars}} caracteres)."
+    "planning": "Planificando...",
+    "planSummary": "El documento se procesará en {{chunks}} bloque(s), generando ~{{tasks}} tareas (~{{tokens}} tokens estimados).",
+    "continue": "Continuar",
+    "progress": "Procesando bloque {{current}} de {{total}}..."
   },
   "settings": {
     "title": "Configuración",
