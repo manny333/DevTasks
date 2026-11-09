@@ -174,6 +174,8 @@ O desde la terminal de Coolify.
 |---|---|
 | `JWT_SECRET is required` | Falta la variable en runtime |
 | `P1001: Can't reach database` | `DATABASE_URL` incorrecta o DB en otra red; usa la Internal URL |
+| `The datasource.url property is required` | `DATABASE_URL` no está llegando al runtime; añádela en Environment Variables de la **aplicación** (no solo en la base de datos), con scope `runtime` y redeploy |
+| Healthcheck `unhealthy` | La imagen ya incluye `curl`; revisa primero los logs de la app, normalmente es la DB o una migración |
 | Login Google sin client ID | Falta `VITE_GOOGLE_CLIENT_ID` como build arg; reconstruye |
 | Dominio 502 | El proceso no escucha en `0.0.0.0` o `Ports Exposes` no es 5001 |
 | Uploads fallan | Permisos del volumen; `chown` al usuario `kanvy` |

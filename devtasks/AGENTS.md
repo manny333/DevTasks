@@ -34,7 +34,7 @@ devtasks/
 ├── mcp-server/       # Servidor MCP portable (stdio/HTTP) para agentes
 ├── dsh-kanvy/        # Plugin nativo de DeepSeek Harness (tools Kanvy)
 ├── shared/           # Contrato de tipos + check de drift (CI)
-└── docker-compose.yml # PostgreSQL 15, puerto 5433
+└── docker-compose.yml # Stack Docker: app + PostgreSQL 15
 ```
 
 ## Comandos Principales
@@ -55,7 +55,8 @@ devtasks/
 - `npx tsc -b` — TypeScript check con project references
 
 ### Infraestructura
-- `docker compose up -d` — Iniciar PostgreSQL
+- `docker compose up -d postgres` — Iniciar solo PostgreSQL para desarrollo
+- `docker compose --env-file .env.docker up -d --build` — App completa (frontend + backend + PostgreSQL)
 
 ### MCP server (directorio: `mcp-server/`)
 - `npm run build` — Compilar TypeScript
