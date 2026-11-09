@@ -1099,11 +1099,21 @@
 .task-card-dropdown-divider { height: 1px; background: var(--border); margin: 3px 4px; }
 
 
-.task-card-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
-.task-card-desc p { margin: 0; }
+.task-card-desc {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.4;
+  min-width: 0; max-width: 100%;
+  overflow-wrap: anywhere; word-break: break-word;
+}
+.task-card-desc p { margin: 0; overflow-wrap: anywhere; word-break: break-word; }
 .task-card-desc strong { font-weight: 600; color: var(--text-primary); }
 .task-card-desc em { font-style: italic; }
-.task-card-desc code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; background: var(--bg-tertiary); padding: 1px 4px; border-radius: 3px; }
+.task-card-desc code {
+  font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px;
+  background: var(--bg-tertiary); padding: 1px 4px; border-radius: 3px;
+  white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.task-card-desc a { overflow-wrap: anywhere; word-break: break-word; }
 .task-card-desc del { opacity: 0.5; }
 .task-card-footer { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; justify-content: space-between; }
 .task-card-comments { font-size: 11px; color: var(--text-muted); margin-left: auto; }
