@@ -36,6 +36,13 @@ function fakeClient(overrides = {}) {
     search: async () => ({ projects, tasks }),
     createTask: async (_sectionId, input) => ({ id: 't3', title: input.title, status: input.status ?? 'TODO' }),
     addComment: async () => ({ id: 'c1', content: 'hi', author: { name: 'Emmanuel' } }),
+    getTask: async () => ({
+      ...tasks[0],
+      section: { id: 's1', name: 'Backlog', project: { id: 'p1', name: 'Demo', slug: 'demo' } },
+      subtasks: [{ id: 'sub1', title: 'Check', completed: false }],
+    }),
+    getMe: async () => ({ id: 'u1', name: 'Emmanuel', email: 'em@example.com' }),
+    updateTask: async (_taskId, input) => ({ id: 't1', title: input.title ?? 'First task', status: 'TODO' }),
     ...overrides,
   };
 }
@@ -44,15 +51,38 @@ function byName(tools) {
   return Object.fromEntries(tools.map((tool) => [tool.name, tool]));
 }
 
-test('tools: registers all six native tools', () => {
+test('tools: registers all 29 native tools', () => {
   const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
   assert.deepEqual(Object.keys(tools).sort(), [
     'kanvy_add_comment',
+    'kanvy_add_dependency',
+    'kanvy_add_member',
+    'kanvy_add_subtask',
+    'kanvy_add_tag',
+    'kanvy_agenda',
+    'kanvy_archive_task',
+    'kanvy_assign_task',
+    'kanvy_bulk_create_tasks',
+    'kanvy_create_project',
+    'kanvy_create_section',
+    'kanvy_create_tag',
     'kanvy_create_task',
     'kanvy_get_project',
+    'kanvy_get_task',
+    'kanvy_list_activity',
+    'kanvy_list_attachments',
+    'kanvy_list_comments',
+    'kanvy_list_members',
     'kanvy_list_projects',
+    'kanvy_list_tags',
     'kanvy_list_tasks',
+    'kanvy_move_task',
+    'kanvy_my_tasks',
+    'kanvy_project_health',
     'kanvy_search',
+    'kanvy_update_subtask',
+    'kanvy_update_task',
+    'kanvy_whoami',
   ]);
 });
 
@@ -97,6 +127,42 @@ test('tools: writes are disabled when configured', async () => {
     () => tools.kanvy_add_comment.execute({ taskId: 't1', content: 'hi' }, {}),
     /writes are disabled/
   );
+  await assert.rejects(
+    () => tools.kanvy_update_task.execute({ taskId: 't1', title: 'Nope' }, {}),
+    /writes are disabled/
+  );
+});
+
+test('tools: get_task renders the full detail', async () => {
+  const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
+  const result = await tools.kanvy_get_task.execute({ taskId: 't1' }, {});
+  assert.match(result.text, /# First task/);
+  assert.match(result.text, /Section: Backlog/);
+  assert.match(result.text, /Check/);
+});
+
+test('tools: whoami uses the authenticated user', async () => {
+  const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
+  const result = await tools.kanvy_whoami.execute({}, {});
+  assert.match(result.text, /Emmanuel/);
+  assert.match(result.text, /em@example.com/);
+});
+
+test('tools: bulk dry run lists tasks without writing', async () => {
+  let writes = 0;
+  const tools = byName(createKanvyTools(fakeClient({
+    createTask: async () => {
+      writes++;
+      return { id: 't4', title: 'unused', status: 'TODO' };
+    },
+  }), { allowWrites: true }));
+  const result = await tools.kanvy_bulk_create_tasks.execute({
+    sectionId: 's1',
+    tasks: [{ title: 'One' }, { title: 'Two' }],
+    dryRun: true,
+  }, {});
+  assert.match(result.text, /Dry run: 2 task/);
+  assert.equal(writes, 0);
 });
 
 test('tools: writes validate dates and return ids', async () => {

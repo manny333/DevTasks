@@ -1,17 +1,47 @@
 # dsh-kanvy
 
-Native **DeepSeek Harness** tools for [Kanvy](https://github.com/manny333/DevTasks): list projects, inspect tasks, search, create tasks and comment — without an MCP bridge.
+Native **DeepSeek Harness** tools for [Kanvy](https://github.com/manny333/DevTasks): the same task lifecycle as the MCP server, without an MCP bridge.
 
-Six tools are registered directly in the DSH tool registry:
+**29 tools** are registered directly in the DSH tool registry.
 
-| Tool | Purpose | Writes |
-|---|---|---|
-| `kanvy_list_projects` | Projects with section/member counts | no |
-| `kanvy_get_project` | Project by slug: sections, counts, tags | no |
-| `kanvy_list_tasks` | Section tasks with status, due date, subtasks, assignees | no |
-| `kanvy_search` | Search projects and tasks | no |
-| `kanvy_create_task` | Create a task in a section | yes |
-| `kanvy_add_comment` | Comment on a task | yes |
+### Read
+
+| Tool | Purpose |
+|---|---|
+| `kanvy_list_projects` | Projects with section/member counts |
+| `kanvy_get_project` | Project by slug: sections, counts, tags |
+| `kanvy_list_tasks` | Section tasks with status, due date, subtasks, assignees |
+| `kanvy_get_task` | Full task detail: comments, subtasks, dependencies, attachments |
+| `kanvy_list_comments` | Task comments |
+| `kanvy_list_members` | Project members and roles |
+| `kanvy_list_tags` | Project tags with ids |
+| `kanvy_list_activity` | Task activity log |
+| `kanvy_list_attachments` | Task attachments and signed URLs |
+| `kanvy_my_tasks` | Tasks assigned to the current user |
+| `kanvy_project_health` | Completion, overdue, due-soon, unassigned, blocked |
+| `kanvy_agenda` | Tasks due in a date range |
+| `kanvy_search` | Search projects and tasks |
+| `kanvy_whoami` | Authenticated Kanvy user |
+
+### Write (`allowWrites: true`)
+
+| Tool | Purpose |
+|---|---|
+| `kanvy_create_project` | Create a project |
+| `kanvy_create_section` | Create a section |
+| `kanvy_create_task` | Create a task |
+| `kanvy_bulk_create_tasks` | Create up to 25 tasks (supports `dryRun`) |
+| `kanvy_update_task` | Title, description, start or due date |
+| `kanvy_move_task` | Change status/column |
+| `kanvy_archive_task` | Archive or unarchive |
+| `kanvy_add_comment` | Comment on a task |
+| `kanvy_add_subtask` | Add a checklist item |
+| `kanvy_update_subtask` | Rename or complete a subtask |
+| `kanvy_assign_task` | Assign a user by email |
+| `kanvy_create_tag` | Create a project tag |
+| `kanvy_add_tag` | Apply a tag to a task |
+| `kanvy_add_member` | Add a project member |
+| `kanvy_add_dependency` | Add a blocking dependency |
 
 ## Install
 
@@ -52,7 +82,7 @@ Set-Content "$dir\token" "<kanvy-jwt>" -NoNewline
 
 Precedence: `config.token` → `config.tokenFile` → `~/.dsh/storages/kanvy/token` → `KANVY_TOKEN`.
 
-The token is read on every tool call, so rotating the file does not require a plugin reload. Kanvy app tokens expire after 7 days; generate a fresh one from the app login when needed.
+The token is read on every tool call, so rotating the file does not require a plugin reload. Web-app tokens expire after 7 days; the backend's `npm run mcp:token -- <email>` command writes a 90-day token to the same file.
 
 ## Configuration
 

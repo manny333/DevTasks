@@ -19,14 +19,16 @@ function fakeContext() {
   };
 }
 
-test('plugin: registers six tools on a DSH-like context', () => {
+test('plugin: registers 29 tools on a DSH-like context', () => {
   const ctx = fakeContext();
   apply(ctx, { apiUrl: 'http://kanvy.test/api', token: 'test-token', allowWrites: false });
 
   const names = ctx.registered.map((tool) => tool.name).sort();
-  assert.equal(names.length, 6);
+  assert.equal(names.length, 29);
   assert.ok(names.includes('kanvy_list_projects'));
   assert.ok(names.includes('kanvy_create_task'));
+  assert.ok(names.includes('kanvy_get_task'));
+  assert.ok(names.includes('kanvy_whoami'));
 });
 
 test('plugin: executes a tool against a mocked fetch', async () => {
