@@ -27,9 +27,9 @@ enum ProjectRole {
 }
 
 enum AccessType {
-  FULL    // Full access — can do everything an owner can except delete project
-  EDITOR  // Can create/edit/move tasks and sections they have access to
-  VIEWER  // Read-only
+  FULL // Full access — can do everything an owner can except delete project
+  EDITOR // Can create/edit/move tasks and sections they have access to
+  VIEWER // Read-only
 }
 
 enum NotificationType {
@@ -64,6 +64,22 @@ enum ActivityAction {
   DEPENDENCY_REMOVED
 }
 
+enum DocumentCategory {
+  SPEC
+  REQUIREMENTS
+  ARCHITECTURE
+  DECISION
+  GUIDE
+  RUNBOOK
+  OTHER
+}
+
+enum DocumentSource {
+  UPLOAD
+  EDITOR
+  AI_IMPORT
+}
+
 // ─── Models ──────────────────────────────────────────────
 
 model User {
@@ -74,14 +90,16 @@ model User {
   googleId  String   @unique
   createdAt DateTime @default(now())
 
-  ownedProjects    Project[]        @relation("ProjectOwner")
+  ownedProjects    Project[]         @relation("ProjectOwner")
   memberships      ProjectMember[]
   sectionAccess    SectionMember[]
   taskAssignments  TaskAssignee[]
   comments         Comment[]
-  notifications    Notification[]   @relation("UserNotifications")
-  activities       ActivityLog[]    @relation("UserActivities")
+  notifications    Notification[]    @relation("UserNotifications")
+  activities       ActivityLog[]     @relation("UserActivities")
   apiKeys          UserApiKey[]
+  documentsCreated ProjectDocument[] @relation("DocumentAuthor")
+  documentsUpdated ProjectDocument[] @relation("DocumentEditor")
 }
 
 model Project {
@@ -98,6 +116,7 @@ model Project {
   sections  Section[]
   tags      Tag[]
   templates TaskTemplate[]
+  documents ProjectDocument[]
 }
 
 model ProjectMember {
@@ -110,7 +129,7 @@ model ProjectMember {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@index([userId])
@@ -142,7 +161,7 @@ model SectionMember {
   section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([sectionId, userId])
   @@index([userId])
@@ -168,9 +187,9 @@ model Task {
   assignees   TaskAssignee[]
   attachments TaskAttachment[]
   subtasks    Subtask[]
-  activities  ActivityLog[]     @relation("TaskActivities")
-  blockedBy   TaskDependency[]  @relation("TaskBlockedBy")
-  blocks      TaskDependency[]  @relation("TaskBlocks")
+  activities  ActivityLog[]    @relation("TaskActivities")
+  blockedBy   TaskDependency[] @relation("TaskBlockedBy")
+  blocks      TaskDependency[] @relation("TaskBlocks")
 
   @@index([sectionId])
 }
@@ -193,8 +212,8 @@ model TaskDependency {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  taskId      String
-  task        Task   @relation("TaskBlockedBy", fields: [taskId], references: [id], onDelete: Cascade)
+  taskId String
+  task   Task   @relation("TaskBlockedBy", fields: [taskId], references: [id], onDelete: Cascade)
 
   dependsOnId String
   dependsOn   Task   @relation("TaskBlocks", fields: [dependsOnId], references: [id], onDelete: Cascade)
@@ -205,17 +224,63 @@ model TaskDependency {
 }
 
 model TaskAttachment {
-  id           String   @id @default(cuid())
-  filename     String   // original filename shown to users
-  storageKey   String   // provider-specific key (local path or blob name)
-  mimeType     String
-  size         Int      // bytes
-  createdAt    DateTime @default(now())
+  id         String   @id @default(cuid())
+  filename   String // original filename shown to users
+  storageKey String // provider-specific key (local path or blob name)
+  mimeType   String
+  size       Int // bytes
+  createdAt  DateTime @default(now())
 
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
+}
+
+model ProjectDocument {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  slug        String
+  category    DocumentCategory @default(OTHER)
+  content     String           @db.Text
+  contentHash String?
+  source      DocumentSource   @default(EDITOR)
+
+  isPinned   Boolean @default(false)
+  isArchived Boolean @default(false)
+
+  createdById String
+  createdBy   User    @relation("DocumentAuthor", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?   @relation("DocumentEditor", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions ProjectDocumentVersion[]
+
+  @@unique([projectId, slug])
+  @@index([projectId, category])
+  @@index([projectId, isPinned])
+  @@index([projectId, contentHash])
+}
+
+model ProjectDocumentVersion {
+  id         String          @id @default(cuid())
+  documentId String
+  document   ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  title       String
+  category    DocumentCategory
+  content     String           @db.Text
+  changeNote  String?
+  createdById String?
+  createdAt   DateTime         @default(now())
+
+  @@index([documentId, createdAt])
 }
 
 model TaskAssignee {
@@ -225,7 +290,7 @@ model TaskAssignee {
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([taskId, userId])
   @@index([userId])
@@ -237,10 +302,10 @@ model Comment {
   createdAt DateTime @default(now())
 
   taskId String
-  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   authorId String
-  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
 }
@@ -261,10 +326,10 @@ model Tag {
 
 model TaskTag {
   taskId String
-  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   tagId String
-  tag   Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tag   Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([taskId, tagId])
 }
@@ -286,14 +351,14 @@ model TaskTemplate {
 }
 
 model Notification {
-  id          String           @id @default(cuid())
-  type        NotificationType
-  read        Boolean          @default(false)
-  createdAt   DateTime         @default(now())
+  id        String           @id @default(cuid())
+  type      NotificationType
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
 
   // Recipient
   userId String
-  user   User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
 
   // Context stored at creation time (denormalized so it survives deletions)
   actorName   String
@@ -301,15 +366,15 @@ model Notification {
   taskTitle   String?
   projectId   String?
   projectName String?
-  meta        Json?    // e.g. { newStatus: "DONE" } for status changes
+  meta        Json? // e.g. { newStatus: "DONE" } for status changes
 
   @@index([userId])
 }
 
 model ActivityLog {
-  id          String         @id @default(cuid())
-  action      ActivityAction
-  createdAt   DateTime       @default(now())
+  id        String         @id @default(cuid())
+  action    ActivityAction
+  createdAt DateTime       @default(now())
 
   taskId      String?
   taskTitle   String
@@ -321,7 +386,7 @@ model ActivityLog {
   details     Json?
 
   task  Task? @relation("TaskActivities", fields: [taskId], references: [id], onDelete: SetNull)
-  actor User @relation("UserActivities", fields: [actorId], references: [id], onDelete: Cascade)
+  actor User  @relation("UserActivities", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@index([projectId])
@@ -331,13 +396,13 @@ model ActivityLog {
 model UserApiKey {
   id        String   @id @default(cuid())
   provider  String
-  apiKey    String   // AES-256-GCM envelope: v1.<iv>.<tag>.<ciphertext>
+  apiKey    String // AES-256-GCM envelope: v1.<iv>.<tag>.<ciphertext>
   label     String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
 }

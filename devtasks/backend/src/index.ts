@@ -21,6 +21,7 @@ import aiRoutes from './routes/ai';
 import userSettingsRoutes from './routes/userSettings';
 import exportRoutes from './routes/export';
 import meRoutes from './routes/me';
+import documentRoutes from './routes/documents';
 import { verifyUploadSignature, resolveUploadPath } from './lib/storage';
 import prisma from './lib/prisma';
 
@@ -101,6 +102,7 @@ app.use('/api/ai', aiRoutes);           // /api/ai/*
 app.use('/api/user', userSettingsRoutes); // /api/user/ai-keys
 app.use('/api/me', meRoutes);             // /api/me/tasks
 app.use('/api/projects', exportRoutes);  // /api/projects/:projectId/export
+app.use('/api/projects', documentRoutes); // /api/projects/:projectId/documents, /context
 
 // Health check
 app.get('/api/health', async (_req, res) => {

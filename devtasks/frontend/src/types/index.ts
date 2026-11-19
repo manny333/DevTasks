@@ -138,6 +138,49 @@ export interface Project {
   _count?: { sections: number; members: number };
 }
 
+export type DocumentCategory =
+  | 'SPEC'
+  | 'REQUIREMENTS'
+  | 'ARCHITECTURE'
+  | 'DECISION'
+  | 'GUIDE'
+  | 'RUNBOOK'
+  | 'OTHER';
+
+export type DocumentSource = 'UPLOAD' | 'EDITOR' | 'AI_IMPORT';
+
+export interface ProjectDocumentSummary {
+  id: string;
+  title: string;
+  slug: string;
+  category: DocumentCategory;
+  source: DocumentSource;
+  isPinned: boolean;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author: User;
+  updatedBy: User | null;
+  excerpt: string;
+  size: number;
+}
+
+export interface ProjectDocument extends ProjectDocumentSummary {
+  content: string;
+}
+
+export interface ProjectDocumentVersion {
+  id: string;
+  documentId: string;
+  title: string;
+  category: DocumentCategory;
+  content: string;
+  changeNote: string | null;
+  createdById: string | null;
+  createdAt: string;
+  size: number;
+}
+
 export interface Comment {
   id: string;
   content: string;

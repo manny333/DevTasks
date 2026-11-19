@@ -13,6 +13,7 @@ const Board = lazy(() => import('../components/Kanban/Board'));
 const CalendarBoard = lazy(() => import('../components/Calendar/CalendarBoard'));
 const ListView = lazy(() => import('../components/ListView/ListView'));
 const GanttBoard = lazy(() => import('../components/Gantt/GanttBoard'));
+const ProjectDocs = lazy(() => import('../components/Docs/ProjectDocs'));
 const TaskModal = lazy(() => import('../components/Kanban/TaskModal'));
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -38,7 +39,7 @@ export default function ProjectBoard() {
   const [pendingDeleteSection, setPendingDeleteSection] = useState<Section | null>(null);
   const deleteSectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showArchivedSections, setShowArchivedSections] = useState(false);
-  const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt' | 'docs'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showAIImport, setShowAIImport] = useState(false);
 
@@ -150,6 +151,9 @@ export default function ProjectBoard() {
   // at project level; a section/task grant only manages its own section.
   const canManageProject = canEdit
     && (!project.myAccess || project.myAccess.level === 'owner' || project.myAccess.level === 'project');
+  const canArchiveDocs = !project.myAccess
+    || project.myAccess.level === 'owner'
+    || (project.myAccess.level === 'project' && project.myAccess.accessType === 'FULL');
 
   const displayedSections = (project.sections || []).filter(sec => showArchivedSections ? true : !sec.archived);
 
@@ -300,6 +304,15 @@ export default function ProjectBoard() {
             </svg>
             {t('gantt.title')}
           </button>
+          <button
+            className={`calendar-view-btn ${viewMode === 'docs' ? 'active' : ''}`}
+            onClick={() => setViewMode('docs')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            {t('docs.title')}
+          </button>
         </div>
 
         <Suspense fallback={<div className="loading-screen"><div className="spinner" /></div>}>
@@ -328,6 +341,12 @@ export default function ProjectBoard() {
           <ListView
             sections={project.sections || []}
             onTaskClick={(task) => setSelectedTask(task)}
+          />
+        ) : viewMode === 'docs' ? (
+          <ProjectDocs
+            projectId={project.id}
+            canEdit={canManageProject}
+            canArchive={canArchiveDocs}
           />
         ) : (
           <GanttBoard
