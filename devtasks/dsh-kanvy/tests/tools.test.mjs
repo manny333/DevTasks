@@ -43,6 +43,41 @@ function fakeClient(overrides = {}) {
     }),
     getMe: async () => ({ id: 'u1', name: 'Emmanuel', email: 'em@example.com' }),
     updateTask: async (_taskId, input) => ({ id: 't1', title: input.title ?? 'First task', status: 'TODO' }),
+    listDocuments: async () => [{
+      id: 'doc1',
+      title: 'Demo specification',
+      slug: 'demo-specification',
+      category: 'SPEC',
+      source: 'EDITOR',
+      isPinned: true,
+      isArchived: false,
+      createdAt: '2026-11-01T00:00:00.000Z',
+      updatedAt: '2026-11-02T00:00:00.000Z',
+      author: { id: 'u1', name: 'Emmanuel' },
+      excerpt: 'The demo project specification.',
+      size: 28,
+    }],
+    getDocument: async () => ({
+      id: 'doc1',
+      title: 'Demo specification',
+      slug: 'demo-specification',
+      category: 'SPEC',
+      source: 'EDITOR',
+      isPinned: true,
+      isArchived: false,
+      createdAt: '2026-11-01T00:00:00.000Z',
+      updatedAt: '2026-11-02T00:00:00.000Z',
+      author: { id: 'u1', name: 'Emmanuel' },
+      excerpt: 'The demo project specification.',
+      size: 28,
+      content: '# Demo specification\n\nThe demo project specification.',
+    }),
+    getProjectContext: async () => ({
+      project: { id: 'p1', name: 'Demo Project', slug: 'demo' },
+      documents: [],
+      content: '# Demo Project\n\n## Demo specification',
+      truncated: false,
+    }),
     ...overrides,
   };
 }
@@ -51,7 +86,7 @@ function byName(tools) {
   return Object.fromEntries(tools.map((tool) => [tool.name, tool]));
 }
 
-test('tools: registers all 29 native tools', () => {
+test('tools: registers all 33 native tools', () => {
   const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
   assert.deepEqual(Object.keys(tools).sort(), [
     'kanvy_add_comment',
@@ -67,11 +102,14 @@ test('tools: registers all 29 native tools', () => {
     'kanvy_create_section',
     'kanvy_create_tag',
     'kanvy_create_task',
+    'kanvy_get_document',
     'kanvy_get_project',
+    'kanvy_get_project_context',
     'kanvy_get_task',
     'kanvy_list_activity',
     'kanvy_list_attachments',
     'kanvy_list_comments',
+    'kanvy_list_documents',
     'kanvy_list_members',
     'kanvy_list_projects',
     'kanvy_list_tags',
@@ -80,6 +118,7 @@ test('tools: registers all 29 native tools', () => {
     'kanvy_my_tasks',
     'kanvy_project_health',
     'kanvy_search',
+    'kanvy_search_documents',
     'kanvy_update_subtask',
     'kanvy_update_task',
     'kanvy_whoami',
@@ -163,6 +202,23 @@ test('tools: bulk dry run lists tasks without writing', async () => {
   }, {});
   assert.match(result.text, /Dry run: 2 task/);
   assert.equal(writes, 0);
+});
+
+test('tools: documents can be listed and read by slug', async () => {
+  const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
+  const list = await tools.kanvy_list_documents.execute({ projectSlug: 'demo' }, {});
+  assert.match(list.text, /Demo specification/);
+  assert.match(list.text, /demo-specification/);
+
+  const doc = await tools.kanvy_get_document.execute({
+    projectSlug: 'demo',
+    documentId: 'demo-specification',
+  }, {});
+  assert.match(doc.text, /# Demo specification/);
+  assert.match(doc.text, /The demo project specification/);
+
+  const context = await tools.kanvy_get_project_context.execute({ projectSlug: 'demo' }, {});
+  assert.match(context.text, /Demo specification/);
 });
 
 test('tools: writes validate dates and return ids', async () => {

@@ -5,8 +5,11 @@ import {
   formatAgenda,
   formatAttachments,
   formatComments,
+  formatDocumentPage,
+  formatDocuments,
   formatMembers,
   formatMyTasks,
+  formatProjectContext,
   formatProjectHealth,
   formatProjectLine,
   formatProjectMarkdown,
@@ -18,7 +21,7 @@ import {
   truncate,
 } from './format.js';
 import type { CreateTaskInput, KanvyClient } from './kanvyClient.js';
-import type { TaskStatus } from './types.js';
+import type { DocumentCategory, TaskStatus } from './types.js';
 
 export interface ToolOptions {
   allowWrites: boolean;
@@ -89,6 +92,26 @@ export interface ToolHandlers {
     dryRun?: boolean;
   }) => Promise<string>;
   whoami: () => Promise<string>;
+  list_documents: (input: {
+    projectSlug: string;
+    query?: string;
+    category?: DocumentCategory;
+    pinned?: boolean;
+    includeArchived?: boolean;
+    limit?: number;
+  }) => Promise<string>;
+  get_document: (input: {
+    projectSlug: string;
+    documentId: string;
+    offset?: number;
+    maxChars?: number;
+  }) => Promise<string>;
+  search_documents: (input: {
+    projectSlug: string;
+    query: string;
+    limit?: number;
+  }) => Promise<string>;
+  get_project_context: (input: { projectSlug: string }) => Promise<string>;
 }
 
 const DEFAULT_LIMIT = 25;
@@ -97,6 +120,11 @@ const MAX_LIMIT = 100;
 function clampLimit(value: number | undefined, fallback = DEFAULT_LIMIT): number {
   if (value === undefined) return fallback;
   return Math.min(Math.max(Math.trunc(value), 1), MAX_LIMIT);
+}
+
+function clampMaxChars(value: number | undefined, fallback = 12000): number {
+  if (value === undefined) return fallback;
+  return Math.min(Math.max(Math.trunc(value), 1000), 20000);
 }
 
 /**
@@ -364,10 +392,58 @@ export function createToolHandlers(client: KanvyClient, options: ToolOptions): T
       const user = await client.getMe();
       return `# Kanvy user\n\n- ${user.name} <${user.email}>\n- ID: \`${user.id}\``;
     },
+
+    list_documents: async ({ projectSlug, query, category, pinned, includeArchived, limit }) => {
+      const project = await client.getProject(projectSlug);
+      const documents = await client.listDocuments(project.id, {
+        ...(query ? { query } : {}),
+        ...(category ? { category } : {}),
+        ...(pinned !== undefined ? { pinned } : {}),
+        ...(includeArchived !== undefined ? { includeArchived } : {}),
+        limit: Math.min(clampLimit(limit, 50), maxItems),
+      });
+      return formatDocuments(documents);
+    },
+
+    get_document: async ({ projectSlug, documentId, offset, maxChars }) => {
+      const project = await client.getProject(projectSlug);
+      const documents = await client.listDocuments(project.id, {
+        includeArchived: true,
+        limit: 100,
+      });
+      const match = documents.find((document) => document.id === documentId || document.slug === documentId);
+      if (!match) throw new Error(`Document not found: ${documentId}`);
+      const document = await client.getDocument(project.id, match.id);
+      return formatDocumentPage(document, Math.max(offset ?? 0, 0), clampMaxChars(maxChars));
+    },
+
+    search_documents: async ({ projectSlug, query, limit }) => {
+      if (query.trim().length < 2) throw new Error('query must have at least 2 characters');
+      const project = await client.getProject(projectSlug);
+      const documents = await client.listDocuments(project.id, {
+        query: query.trim(),
+        limit: Math.min(clampLimit(limit, 10), maxItems),
+      });
+      return formatDocuments(documents);
+    },
+
+    get_project_context: async ({ projectSlug }) => {
+      const project = await client.getProject(projectSlug);
+      return formatProjectContext(await client.getProjectContext(project.id));
+    },
   };
 }
 
 const statusSchema = z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']);
+const documentCategorySchema = z.enum([
+  'SPEC',
+  'REQUIREMENTS',
+  'ARCHITECTURE',
+  'DECISION',
+  'GUIDE',
+  'RUNBOOK',
+  'OTHER',
+]);
 const dateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
@@ -821,5 +897,74 @@ export function registerTools(server: McpServer, handlers: ToolHandlers): void {
       annotations: readOnly,
     },
     async () => run(() => handlers.whoami())
+  );
+
+  server.registerTool(
+    'list_documents',
+    {
+      title: 'List project documentation',
+      description:
+        'List project Markdown documents with title, slug, category, author, excerpt and size. '
+        + 'Use get_document to read the content.',
+      inputSchema: z.object({
+        projectSlug: z.string().min(1).describe('Project slug'),
+        query: z.string().max(200).optional().describe('Search title and content'),
+        category: documentCategorySchema.optional(),
+        pinned: z.boolean().optional().describe('Only pinned documents'),
+        includeArchived: z.boolean().optional().describe('Include archived documents'),
+        limit: z.number().int().min(1).max(MAX_LIMIT).optional().describe('Max documents (default 50)'),
+      }),
+      annotations: readOnly,
+    },
+    async ({ projectSlug, query, category, pinned, includeArchived, limit }) =>
+      run(() => handlers.list_documents({ projectSlug, query, category, pinned, includeArchived, limit }))
+  );
+
+  server.registerTool(
+    'get_document',
+    {
+      title: 'Read a project document',
+      description:
+        'Read a Markdown project document by id or slug. Supports offset and maxChars for long documents.',
+      inputSchema: z.object({
+        projectSlug: z.string().min(1).describe('Project slug'),
+        documentId: z.string().min(1).describe('Document id or slug'),
+        offset: z.number().int().min(0).optional().describe('Start character offset (default 0)'),
+        maxChars: z.number().int().min(1000).max(20000).optional().describe('Max characters (default 12000)'),
+      }),
+      annotations: readOnly,
+    },
+    async ({ projectSlug, documentId, offset, maxChars }) =>
+      run(() => handlers.get_document({ projectSlug, documentId, offset, maxChars }))
+  );
+
+  server.registerTool(
+    'search_documents',
+    {
+      title: 'Search project documentation',
+      description: 'Search project Markdown documents and return matching excerpts.',
+      inputSchema: z.object({
+        projectSlug: z.string().min(1).describe('Project slug'),
+        query: z.string().min(2).max(200).describe('Search text'),
+        limit: z.number().int().min(1).max(MAX_LIMIT).optional().describe('Max results (default 10)'),
+      }),
+      annotations: readOnly,
+    },
+    async ({ projectSlug, query, limit }) =>
+      run(() => handlers.search_documents({ projectSlug, query, limit }))
+  );
+
+  server.registerTool(
+    'get_project_context',
+    {
+      title: 'Get Kanvy project context',
+      description:
+        'Get the project description and its pinned documents as a compact context pack for agents.',
+      inputSchema: z.object({
+        projectSlug: z.string().min(1).describe('Project slug'),
+      }),
+      annotations: readOnly,
+    },
+    async ({ projectSlug }) => run(() => handlers.get_project_context({ projectSlug }))
   );
 }

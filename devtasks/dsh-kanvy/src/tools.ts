@@ -5,8 +5,11 @@ import {
   formatAgenda,
   formatAttachments,
   formatComments,
+  formatDocumentPage,
+  formatDocuments,
   formatMembers,
   formatMyTasks,
+  formatProjectContext,
   formatProjectHealth,
   formatProjectLine,
   formatProjectMarkdown,
@@ -16,7 +19,7 @@ import {
   formatTaskLine,
   truncate,
 } from './core/format.js';
-import type { TaskStatus } from './core/types.js';
+import type { DocumentCategory, TaskStatus } from './core/types.js';
 
 export interface KanvyToolOptions {
   allowWrites: boolean;
@@ -26,6 +29,7 @@ export interface KanvyToolOptions {
 const STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'] as const;
 const ACCESS_TYPES = ['FULL', 'EDITOR', 'VIEWER'] as const;
 const TEMPLATES = ['blank', 'software', 'personal', 'marketing'] as const;
+const DOCUMENT_CATEGORIES = ['SPEC', 'REQUIREMENTS', 'ARCHITECTURE', 'DECISION', 'GUIDE', 'RUNBOOK', 'OTHER'] as const;
 
 const TEXT_OUTPUT = {
   schema: {
@@ -41,6 +45,11 @@ const TEXT_OUTPUT = {
 function clampLimit(value: number | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   return Math.min(Math.max(Math.trunc(value), 1), 100);
+}
+
+function clampMaxChars(value: number | undefined, fallback = 12000): number {
+  if (value === undefined) return fallback;
+  return Math.min(Math.max(Math.trunc(value), 1000), 20000);
 }
 
 function checkDate(value: string | undefined, field: string): void {
@@ -736,6 +745,96 @@ export function createKanvyTools(client: KanvyClient, options: KanvyToolOptions)
       async execute() {
         const user = await client.getMe();
         return text(`# Kanvy user\n\n- ${user.name} <${user.email}>\n- ID: \`${user.id}\``);
+      },
+    }),
+
+    defineTool({
+      name: 'kanvy_list_documents',
+      description:
+        'List project Markdown documents with title, slug, category, author, excerpt and size. '
+        + 'Use kanvy_get_document to read the content.',
+      parameters: {
+        projectSlug: { type: 'string', required: true, description: 'Project slug' },
+        query: { type: 'string', description: 'Search title and content' },
+        category: { type: 'string', enum: DOCUMENT_CATEGORIES, description: 'Optional category filter' },
+        pinned: { type: 'boolean', description: 'Only pinned documents' },
+        includeArchived: { type: 'boolean', description: 'Include archived documents' },
+        limit: { type: 'integer', description: 'Max documents (1-100, default 50)' },
+      },
+      output: TEXT_OUTPUT,
+      timeoutMs,
+      isConcurrencySafe: () => true,
+      async execute({ projectSlug, query, category, pinned, includeArchived, limit }) {
+        const project = await client.getProject(projectSlug);
+        const documents = await client.listDocuments(project.id, {
+          ...(query ? { query } : {}),
+          ...(category ? { category } : {}),
+          ...(pinned !== undefined ? { pinned } : {}),
+          ...(includeArchived !== undefined ? { includeArchived } : {}),
+          limit: clampLimit(limit, 50),
+        });
+        return text(formatDocuments(documents));
+      },
+    }),
+
+    defineTool({
+      name: 'kanvy_get_document',
+      description:
+        'Read a Markdown project document by id or slug. Supports offset and maxChars for long documents.',
+      parameters: {
+        projectSlug: { type: 'string', required: true, description: 'Project slug' },
+        documentId: { type: 'string', required: true, description: 'Document id or slug' },
+        offset: { type: 'integer', description: 'Start character offset (default 0)' },
+        maxChars: { type: 'integer', description: 'Max characters (1000-20000, default 12000)' },
+      },
+      output: TEXT_OUTPUT,
+      timeoutMs,
+      isConcurrencySafe: () => true,
+      async execute({ projectSlug, documentId, offset, maxChars }) {
+        const project = await client.getProject(projectSlug);
+        const documents = await client.listDocuments(project.id, { includeArchived: true, limit: 100 });
+        const match = documents.find((document) => document.id === documentId || document.slug === documentId);
+        if (!match) throw new Error(`Document not found: ${documentId}`);
+        const document = await client.getDocument(project.id, match.id);
+        return text(formatDocumentPage(document, Math.max(offset ?? 0, 0), clampMaxChars(maxChars)));
+      },
+    }),
+
+    defineTool({
+      name: 'kanvy_search_documents',
+      description: 'Search project Markdown documents and return matching excerpts.',
+      parameters: {
+        projectSlug: { type: 'string', required: true, description: 'Project slug' },
+        query: { type: 'string', required: true, description: 'Search text (minimum 2 characters)' },
+        limit: { type: 'integer', description: 'Max results (1-100, default 10)' },
+      },
+      output: TEXT_OUTPUT,
+      timeoutMs,
+      isConcurrencySafe: () => true,
+      async execute({ projectSlug, query, limit }) {
+        if (query.trim().length < 2) throw new Error('query must have at least 2 characters');
+        const project = await client.getProject(projectSlug);
+        const documents = await client.listDocuments(project.id, {
+          query: query.trim(),
+          limit: clampLimit(limit, 10),
+        });
+        return text(formatDocuments(documents));
+      },
+    }),
+
+    defineTool({
+      name: 'kanvy_get_project_context',
+      description:
+        'Get the project description and its pinned documents as a compact context pack for agents.',
+      parameters: {
+        projectSlug: { type: 'string', required: true, description: 'Project slug' },
+      },
+      output: TEXT_OUTPUT,
+      timeoutMs,
+      isConcurrencySafe: () => true,
+      async execute({ projectSlug }) {
+        const project = await client.getProject(projectSlug);
+        return text(formatProjectContext(await client.getProjectContext(project.id)));
       },
     }),
   ];

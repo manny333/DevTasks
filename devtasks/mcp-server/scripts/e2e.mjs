@@ -55,6 +55,36 @@ const tasks = [
 
 const user = { id: 'u1', name: 'Emmanuel', email: 'emmanuel@example.com' };
 
+const documents = [
+  {
+    id: 'doc1',
+    title: 'Demo specification',
+    slug: 'demo-specification',
+    category: 'SPEC',
+    source: 'EDITOR',
+    isPinned: true,
+    isArchived: false,
+    createdAt: '2026-11-01T00:00:00.000Z',
+    updatedAt: '2026-11-02T00:00:00.000Z',
+    author: user,
+    updatedBy: null,
+    excerpt: 'The demo project specification.',
+    size: 28,
+  },
+];
+
+const documentDetail = {
+  ...documents[0],
+  content: '# Demo specification\n\nThe demo project specification.',
+};
+
+const projectContext = {
+  project: { id: 'p1', name: 'Demo Project', slug: 'demo', description: 'A demo project' },
+  documents: [{ id: 'doc1', title: 'Demo specification', slug: 'demo-specification', category: 'SPEC', content: documentDetail.content }],
+  content: '# Demo Project\n\nA demo project\n\n## Demo specification (SPEC)\n\n# Demo specification\n\nThe demo project specification.',
+  truncated: false,
+};
+
 const taskDetail = {
   ...tasks[0],
   section: { id: 'sec1', name: 'Backlog', project: { id: 'p1', name: 'Demo Project', slug: 'demo' } },
@@ -140,6 +170,18 @@ const apiServer = http.createServer(async (req, res) => {
     sendJson(res, 200, [{ id: 'tag1', name: 'backend', color: '#000000' }]);
     return;
   }
+  if (req.method === 'GET' && path === '/api/projects/p1/documents') {
+    sendJson(res, 200, documents);
+    return;
+  }
+  if (req.method === 'GET' && path === '/api/projects/p1/documents/doc1') {
+    sendJson(res, 200, documentDetail);
+    return;
+  }
+  if (req.method === 'GET' && path === '/api/projects/p1/context') {
+    sendJson(res, 200, projectContext);
+    return;
+  }
   if (req.method === 'GET' && path === '/api/projects/p1/members') {
     sendJson(res, 200, [{ id: 'm1', role: 'OWNER', accessType: 'FULL', user }]);
     return;
@@ -181,7 +223,7 @@ try {
 
   const tools = await client.listTools();
   const toolNames = tools.tools.map((tool) => tool.name).sort();
-  check('lists 29 tools', toolNames.length === 29, `${toolNames.length}: ${toolNames.join(', ')}`);
+  check('lists 33 tools', toolNames.length === 33, `${toolNames.length}: ${toolNames.join(', ')}`);
 
   const projectsResult = await client.callTool({ name: 'list_projects', arguments: {} });
   check('list_projects returns the project', textOf(projectsResult).includes('Demo Project'));
@@ -216,6 +258,24 @@ try {
   const who = await client.callTool({ name: 'whoami', arguments: {} });
   check('whoami identifies the user', textOf(who).includes('emmanuel@example.com'));
 
+  const docsList = await client.callTool({ name: 'list_documents', arguments: { projectSlug: 'demo' } });
+  check('list_documents returns document metadata', textOf(docsList).includes('Demo specification'));
+
+  const doc = await client.callTool({
+    name: 'get_document',
+    arguments: { projectSlug: 'demo', documentId: 'demo-specification' },
+  });
+  check('get_document reads by slug', textOf(doc).includes('The demo project specification.'));
+
+  const docsSearch = await client.callTool({
+    name: 'search_documents',
+    arguments: { projectSlug: 'demo', query: 'specification' },
+  });
+  check('search_documents returns matches', textOf(docsSearch).includes('demo-specification'));
+
+  const context = await client.callTool({ name: 'get_project_context', arguments: { projectSlug: 'demo' } });
+  check('get_project_context returns pinned docs', textOf(context).includes('## Demo specification'));
+
   const health = await client.callTool({ name: 'project_health', arguments: { projectSlug: 'demo' } });
   check('project_health summarizes the project', textOf(health).includes('Completion'));
 
@@ -233,9 +293,19 @@ try {
 
   const templates = await client.listResourceTemplates();
   check('lists the project resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}'));
+  check('lists the document resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}/documents/{documentId}'));
 
   const resource = await client.readResource({ uri: 'kanvy://projects/demo' });
   check('reads a project resource', (resource.contents[0]?.text ?? '').includes('# Demo Project'));
+
+  const docIndex = await client.readResource({ uri: 'kanvy://projects/demo/documents' });
+  check('reads the document index resource', (docIndex.contents[0]?.text ?? '').includes('Demo specification'));
+
+  const docResource = await client.readResource({ uri: 'kanvy://projects/demo/documents/demo-specification' });
+  check('reads a document resource', (docResource.contents[0]?.text ?? '').includes('The demo project specification.'));
+
+  const contextResource = await client.readResource({ uri: 'kanvy://projects/demo/context' });
+  check('reads the context resource', (contextResource.contents[0]?.text ?? '').includes('project context'));
 
   const prompts = await client.listPrompts();
   check('lists the status report prompt', prompts.prompts.some((p) => p.name === 'project_status_report'));

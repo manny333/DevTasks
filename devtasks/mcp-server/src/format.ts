@@ -6,6 +6,9 @@ import type {
   MyTask,
   ProjectDetail,
   ProjectSummary,
+  ProjectContext,
+  ProjectDocument,
+  ProjectDocumentSummary,
   SearchResults,
   SectionSummary,
   SubtaskItem,
@@ -267,5 +270,60 @@ export function formatProjectHealth(project: ProjectDetail, stats: {
     `- Unassigned: ${stats.unassigned}`,
     `- Blocked: ${stats.blocked}`,
     `- Sections: ${project.sections?.length ?? 0}`,
+  ].join('\n');
+}
+
+export function formatDocumentLine(document: ProjectDocumentSummary): string {
+  const pinned = document.isPinned ? ' ★' : '';
+  const archived = document.isArchived ? ' (archived)' : '';
+  return `- **${document.title}**${pinned} (\`${document.slug}\`) · ${document.category}${archived} · ${document.author?.name ?? 'unknown'} · ${formatDate(document.updatedAt)} — ${truncate(document.excerpt, 180)}`;
+}
+
+export function formatDocuments(documents: ProjectDocumentSummary[]): string {
+  if (documents.length === 0) return 'No documents found.';
+  return [
+    `# Project documentation (${documents.length})`,
+    '',
+    ...documents.map(formatDocumentLine),
+    '',
+    'Use get_document with a document slug or id to read the full content.',
+  ].join('\n');
+}
+
+export function formatDocumentPage(
+  document: ProjectDocument,
+  offset: number,
+  maxChars: number
+): string {
+  const start = Math.min(Math.max(offset, 0), document.content.length);
+  const end = Math.min(start + maxChars, document.content.length);
+  const content = document.content.slice(start, end);
+  const truncated = end < document.content.length;
+  return [
+    `# ${document.title}`,
+    '',
+    `- Slug: \`${document.slug}\``,
+    `- Category: ${document.category}`,
+    `- Pinned: ${document.isPinned ? 'yes' : 'no'}`,
+    `- Updated: ${formatDate(document.updatedAt)} by ${document.updatedBy?.name ?? document.author?.name ?? 'unknown'}`,
+    `- Size: ${document.size} bytes`,
+    `- Slice: ${start}-${end} of ${document.content.length} characters`,
+    '',
+    content,
+    ...(truncated
+      ? ['', `… content truncated; call get_document with offset=${end} to continue.`]
+      : []),
+  ].join('\n');
+}
+
+export function formatProjectContext(context: ProjectContext): string {
+  return [
+    `# ${context.project.name} — project context`,
+    '',
+    `- Slug: \`${context.project.slug}\``,
+    ...(context.project.description ? ['', context.project.description] : []),
+    '',
+    context.content || 'No pinned documents yet.',
+    ...(context.truncated ? ['', '… context truncated.'] : []),
   ].join('\n');
 }

@@ -140,3 +140,41 @@ export interface AssigneeItem {
   accessType: string;
   user: { id: string; name: string; email: string };
 }
+
+export type DocumentCategory =
+  | 'SPEC'
+  | 'REQUIREMENTS'
+  | 'ARCHITECTURE'
+  | 'DECISION'
+  | 'GUIDE'
+  | 'RUNBOOK'
+  | 'OTHER';
+
+export type DocumentSource = 'UPLOAD' | 'EDITOR' | 'AI_IMPORT';
+
+export interface ProjectDocumentSummary {
+  id: string;
+  title: string;
+  slug: string;
+  category: DocumentCategory;
+  source: DocumentSource;
+  isPinned: boolean;
+  isArchived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; name: string; email?: string; avatar?: string };
+  updatedBy?: { id: string; name: string; email?: string; avatar?: string } | null;
+  excerpt: string;
+  size: number;
+}
+
+export interface ProjectDocument extends ProjectDocumentSummary {
+  content: string;
+}
+
+export interface ProjectContext {
+  project: { id: string; name: string; slug: string; description?: string | null };
+  documents: { id: string; title: string; slug: string; category: DocumentCategory; content: string }[];
+  content: string;
+  truncated: boolean;
+}

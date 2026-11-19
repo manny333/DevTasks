@@ -9,6 +9,9 @@ import type {
   MyTask,
   ProjectDetail,
   ProjectSummary,
+  ProjectContext,
+  ProjectDocument,
+  ProjectDocumentSummary,
   SearchResults,
   SubtaskItem,
   TagItem,
@@ -270,6 +273,40 @@ export class KanvyClient {
     const params = new URLSearchParams({ from, to });
     return this.request<TaskSummary[]>(
       `/projects/${encodeURIComponent(projectId)}/calendar?${params.toString()}`
+    );
+  }
+
+  listDocuments(
+    projectId: string,
+    options: {
+      query?: string;
+      category?: string;
+      pinned?: boolean;
+      includeArchived?: boolean;
+      limit?: number;
+    } = {}
+  ): Promise<ProjectDocumentSummary[]> {
+    const params = new URLSearchParams();
+    if (options.query) params.set('q', options.query);
+    if (options.category) params.set('category', options.category);
+    if (options.pinned) params.set('pinned', 'true');
+    if (options.includeArchived) params.set('includeArchived', 'true');
+    if (options.limit) params.set('limit', String(options.limit));
+    const suffix = params.toString() ? `?${params.toString()}` : '';
+    return this.request<ProjectDocumentSummary[]>(
+      `/projects/${encodeURIComponent(projectId)}/documents${suffix}`
+    );
+  }
+
+  getDocument(projectId: string, documentId: string): Promise<ProjectDocument> {
+    return this.request<ProjectDocument>(
+      `/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(documentId)}`
+    );
+  }
+
+  getProjectContext(projectId: string): Promise<ProjectContext> {
+    return this.request<ProjectContext>(
+      `/projects/${encodeURIComponent(projectId)}/context`
     );
   }
 

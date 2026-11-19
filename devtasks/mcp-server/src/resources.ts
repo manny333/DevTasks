@@ -2,6 +2,9 @@ import { ResourceTemplate } from '@modelcontextprotocol/server';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { KanvyClient } from './kanvyClient.js';
 import {
+  formatDocumentPage,
+  formatDocuments,
+  formatProjectContext,
   formatProjectLine,
   formatProjectMarkdown,
   formatTaskDetail,
@@ -143,6 +146,121 @@ export function registerResources(server: McpServer, client: KanvyClient): void 
       const task = await client.getTask(taskId);
       return {
         contents: [{ uri: uri.href, mimeType: 'text/markdown', text: formatTaskDetail(task) }],
+      };
+    }
+  );
+
+  const documentsTemplate = new ResourceTemplate('kanvy://projects/{slug}/documents', {
+    list: async () => {
+      const projects = await client.listProjects();
+      return {
+        resources: projects.map((project) => ({
+          uri: `kanvy://projects/${project.slug}/documents`,
+          name: `${project.slug}-documents`,
+          title: `${project.name} documentation`,
+          description: 'Markdown documents of the project.',
+          mimeType: 'text/markdown',
+        })),
+      };
+    },
+  });
+
+  server.registerResource(
+    'project-documents',
+    documentsTemplate,
+    {
+      title: 'Kanvy project documentation',
+      description: 'Index of Markdown documents in a project.',
+      mimeType: 'text/markdown',
+    },
+    async (uri, variables) => {
+      const slug = variable(variables.slug);
+      if (!slug) throw new Error('Missing project slug in resource URI');
+      const project = await client.getProject(slug);
+      const documents = await client.listDocuments(project.id, { includeArchived: true, limit: 100 });
+      return {
+        contents: [{ uri: uri.href, mimeType: 'text/markdown', text: formatDocuments(documents) }],
+      };
+    }
+  );
+
+  const documentTemplate = new ResourceTemplate('kanvy://projects/{slug}/documents/{documentId}', {
+    list: async () => {
+      const projects = await client.listProjects();
+      const resources = [];
+      for (const project of projects) {
+        const documents = await client.listDocuments(project.id, { includeArchived: true, limit: 100 });
+        for (const document of documents) {
+          resources.push({
+            uri: `kanvy://projects/${project.slug}/documents/${document.slug}`,
+            name: `${project.slug}-${document.slug}`,
+            title: document.title,
+            description: `${document.category} · ${document.excerpt}`,
+            mimeType: 'text/markdown',
+          });
+        }
+      }
+      return { resources };
+    },
+  });
+
+  server.registerResource(
+    'project-document',
+    documentTemplate,
+    {
+      title: 'Kanvy project document',
+      description: 'Full Markdown content of a project document.',
+      mimeType: 'text/markdown',
+    },
+    async (uri, variables) => {
+      const slug = variable(variables.slug);
+      const documentId = variable(variables.documentId);
+      if (!slug || !documentId) throw new Error('Missing project or document identifier in resource URI');
+      const project = await client.getProject(slug);
+      const documents = await client.listDocuments(project.id, { includeArchived: true, limit: 100 });
+      const match = documents.find((document) => document.id === documentId || document.slug === documentId);
+      if (!match) throw new Error(`Document not found: ${documentId}`);
+      const document = await client.getDocument(project.id, match.id);
+      return {
+        contents: [{
+          uri: uri.href,
+          mimeType: 'text/markdown',
+          text: formatDocumentPage(document, 0, 20000),
+        }],
+      };
+    }
+  );
+
+  const contextTemplate = new ResourceTemplate('kanvy://projects/{slug}/context', {
+    list: async () => {
+      const projects = await client.listProjects();
+      return {
+        resources: projects.map((project) => ({
+          uri: `kanvy://projects/${project.slug}/context`,
+          name: `${project.slug}-context`,
+          title: `${project.name} context`,
+          description: 'Project description and pinned documents for agents.',
+          mimeType: 'text/markdown',
+        })),
+      };
+    },
+  });
+
+  server.registerResource(
+    'project-context',
+    contextTemplate,
+    {
+      title: 'Kanvy project context',
+      description: 'Project description and pinned documents as a compact context pack.',
+      mimeType: 'text/markdown',
+    },
+    async (uri, variables) => {
+      const slug = variable(variables.slug);
+      if (!slug) throw new Error('Missing project slug in resource URI');
+      const project = await client.getProject(slug);
+      const context = await client.getProjectContext(project.id);
+      return {
+        contents: [{ uri: uri.href, mimeType: 'text/markdown', text: formatProjectContext(context) }],
       };
     }
   );

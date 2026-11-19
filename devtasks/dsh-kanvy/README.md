@@ -2,7 +2,7 @@
 
 Native **DeepSeek Harness** tools for [Kanvy](https://github.com/manny333/DevTasks): the same task lifecycle as the MCP server, without an MCP bridge.
 
-**29 tools** are registered directly in the DSH tool registry.
+**33 tools** are registered directly in the DSH tool registry.
 
 ### Read
 
@@ -22,6 +22,10 @@ Native **DeepSeek Harness** tools for [Kanvy](https://github.com/manny333/DevTas
 | `kanvy_agenda` | Tasks due in a date range |
 | `kanvy_search` | Search projects and tasks |
 | `kanvy_whoami` | Authenticated Kanvy user |
+| `kanvy_list_documents` | Project Markdown documents |
+| `kanvy_get_document` | Full document by id or slug, with pagination |
+| `kanvy_search_documents` | Search documents and return excerpts |
+| `kanvy_get_project_context` | Project description + pinned documents |
 
 ### Write (`allowWrites: true`)
 
