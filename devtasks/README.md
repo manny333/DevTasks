@@ -95,6 +95,7 @@ devtasks/
 - [`AGENTS.md`](AGENTS.md) — convenciones y comandos
 - [`DEPLOY.md`](DEPLOY.md) — despliegue con Cloudflare Tunnel
 - [`DEPLOY_COOLIFY.md`](DEPLOY_COOLIFY.md) — despliegue en un VPS con Coolify
+- [`PROJECT_DOCS_PLAN.md`](PROJECT_DOCS_PLAN.md) — propuesta de documentación y memoria del proyecto
 - [`MEMORY.md`](MEMORY.md) — changelog funcional
 - [`AI_INTEGRATION_PLAN.md`](AI_INTEGRATION_PLAN.md) — diseño de la importación con IA
 - [`mcp-server/README.md`](mcp-server/README.md) — servidor MCP para Claude Code, Cursor, VS Code, Codex y otros
