@@ -472,5 +472,42 @@
     "saveError": "No se pudo guardar el contexto de la tarea.",
     "claimError": "No se pudo tomar la tarea.",
     "briefError": "No se pudo generar el Pickup Brief."
+  },
+  "readiness": {
+    "state": {
+      "READY": "Lista",
+      "NEEDS_CONTEXT": "Necesita contexto",
+      "BLOCKED": "Bloqueada",
+      "NOT_APPLICABLE": "No aplica"
+    },
+    "check": {
+      "CONTEXT": "Contexto",
+      "ACCEPTANCE": "Criterios de aceptación",
+      "BLOCKERS": "Sin bloqueos",
+      "DOCUMENT": "Documento relacionado"
+    },
+    "pickable": "Disponible para tomar",
+    "blockedBy": "Bloqueada por: {{names}}"
+  },
+  "pickable": {
+    "open": "Listas para tomar",
+    "eyebrow": "Definition of Ready",
+    "title": "Listas para tomar",
+    "subtitle": "Actividades con contexto suficiente y sin bloqueos.",
+    "configure": "Configurar",
+    "ready": "listas",
+    "needs": "con contexto pendiente",
+    "blocked": "bloqueadas",
+    "tabReady": "Listas",
+    "tabNeeds": "Contexto",
+    "tabBlocked": "Bloqueadas",
+    "tabAll": "Todas",
+    "emptyTitle": "No hay actividades en esta vista",
+    "emptyBody": "Completa el contexto de las tareas o cambia de pestaña.",
+    "view": "Ver tarea",
+    "loadError": "No se pudieron cargar las actividades.",
+    "saveConfigError": "No se pudo guardar la configuración.",
+    "configTitle": "Definition of Ready",
+    "configHint": "Define qué necesita una tarea para considerarse lista."
   }
 }

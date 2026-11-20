@@ -103,6 +103,25 @@ function fakeClient(overrides = {}) {
         updatedAt: '2026-11-03T00:00:00.000Z',
       },
     }),
+    listPickableTasks: async () => ({
+      tasks: [{
+        ...tasks[0],
+        section: { id: 's1', name: 'Backlog' },
+        readiness: {
+          state: 'READY',
+          pickable: true,
+          checks: [
+            { code: 'CONTEXT', passed: true, required: true },
+            { code: 'ACCEPTANCE', passed: true, required: true },
+            { code: 'BLOCKERS', passed: true, required: true },
+            { code: 'DOCUMENT', passed: false, required: false },
+          ],
+          blockedBy: [],
+        },
+      }],
+      counts: { ready: 1, needsContext: 0, blocked: 0, pickable: 1 },
+      config: { projectId: 'p1', requireContext: true, requireAcceptanceCriteria: true, requireNoBlockers: true, requireDocument: false },
+    }),
     ...overrides,
   };
 }
@@ -111,7 +130,7 @@ function byName(tools) {
   return Object.fromEntries(tools.map((tool) => [tool.name, tool]));
 }
 
-test('tools: registers all 35 native tools', () => {
+test('tools: registers all 36 native tools', () => {
   const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
   assert.deepEqual(Object.keys(tools).sort(), [
     'kanvy_add_comment',
@@ -138,6 +157,7 @@ test('tools: registers all 35 native tools', () => {
     'kanvy_list_comments',
     'kanvy_list_documents',
     'kanvy_list_members',
+    'kanvy_list_pickable_tasks',
     'kanvy_list_projects',
     'kanvy_list_tags',
     'kanvy_list_tasks',
@@ -257,6 +277,10 @@ test('tools: documents can be listed and read by slug', async () => {
   const passport = await tools.kanvy_get_project_passport.execute({ projectSlug: 'demo' }, {});
   assert.match(passport.text, /## Setup/);
   assert.match(passport.text, /npm install/);
+
+  const pickable = await tools.kanvy_list_pickable_tasks.execute({ projectSlug: 'demo' }, {});
+  assert.match(pickable.text, /Available: 1/);
+  assert.match(pickable.text, /readiness READY/);
 });
 
 test('tools: writes validate dates and return ids', async () => {

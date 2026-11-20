@@ -470,5 +470,42 @@
     "saveError": "Could not save the task context.",
     "claimError": "Could not take the task.",
     "briefError": "Could not generate the Pickup Brief."
+  },
+  "readiness": {
+    "state": {
+      "READY": "Ready",
+      "NEEDS_CONTEXT": "Needs context",
+      "BLOCKED": "Blocked",
+      "NOT_APPLICABLE": "Not applicable"
+    },
+    "check": {
+      "CONTEXT": "Context",
+      "ACCEPTANCE": "Acceptance criteria",
+      "BLOCKERS": "No blockers",
+      "DOCUMENT": "Related document"
+    },
+    "pickable": "Available to take",
+    "blockedBy": "Blocked by: {{names}}"
+  },
+  "pickable": {
+    "open": "Ready to take",
+    "eyebrow": "Definition of Ready",
+    "title": "Ready to take",
+    "subtitle": "Activities with enough context and no blockers.",
+    "configure": "Configure",
+    "ready": "ready",
+    "needs": "need context",
+    "blocked": "blocked",
+    "tabReady": "Ready",
+    "tabNeeds": "Context",
+    "tabBlocked": "Blocked",
+    "tabAll": "All",
+    "emptyTitle": "No activities in this view",
+    "emptyBody": "Complete task context or switch tabs.",
+    "view": "View task",
+    "loadError": "Could not load activities.",
+    "saveConfigError": "Could not save the configuration.",
+    "configTitle": "Definition of Ready",
+    "configHint": "Define what a task needs to be considered ready."
   }
 }

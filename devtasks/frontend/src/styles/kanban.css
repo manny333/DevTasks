@@ -2850,3 +2850,100 @@ a.attachment-name:hover { color: var(--accent); }
   .task-context-actions button { flex: 1; }
   .task-context-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── Readiness / Pickable ─────────────────────────── */
+.task-card-readiness {
+  float: right; margin-top: 1px; font-size: 9px; line-height: 1;
+}
+.task-card-readiness-ready { color: #16a34a; }
+.task-card-readiness-needs_context { color: #d97706; }
+.task-card-readiness-blocked { color: #dc2626; }
+.task-card-readiness-not_applicable { display: none; }
+
+.task-readiness {
+  margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--bg-primary);
+}
+.task-readiness-ready { border-color: color-mix(in srgb, #22c55e 35%, var(--border)); }
+.task-readiness-needs_context { border-color: color-mix(in srgb, #f59e0b 40%, var(--border)); }
+.task-readiness-blocked { border-color: color-mix(in srgb, #ef4444 40%, var(--border)); }
+.task-readiness-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.task-readiness-state { font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.task-readiness-ready .task-readiness-state { color: #15803d; }
+.task-readiness-needs_context .task-readiness-state { color: #b45309; }
+.task-readiness-blocked .task-readiness-state { color: #b91c1c; }
+.task-readiness-pickable {
+  padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, #22c55e 14%, transparent);
+  color: #15803d; font-size: 9.5px; font-weight: 700;
+}
+.task-readiness-checks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; font-size: 10.5px; }
+.task-readiness-check.passed { color: #15803d; }
+.task-readiness-check.missing { color: #b45309; }
+.task-readiness-check.optional { opacity: 0.72; }
+.task-readiness-blocked { margin: 6px 0 0; color: #b91c1c; font-size: 10.5px; }
+
+.pickable-trigger { margin-left: auto; border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); color: var(--accent); }
+.pickable-overlay {
+  position: fixed; inset: 0; z-index: 75; display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: rgba(0,0,0,0.42);
+}
+.pickable-panel {
+  width: min(980px, 100%); max-height: 90vh; display: flex; flex-direction: column; gap: 14px;
+  padding: 20px; overflow: hidden; border: 1px solid var(--border); border-radius: 14px;
+  background: var(--bg-primary); box-shadow: 0 20px 60px var(--shadow);
+}
+.pickable-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.pickable-header h2 { margin: 2px 0 0; font-size: 22px; }
+.pickable-header p { margin: 5px 0 0; color: var(--text-secondary); font-size: 12.5px; }
+.pickable-header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.pickable-summary { display: flex; gap: 16px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12px; }
+.pickable-summary strong { color: var(--text-primary); font-size: 15px; }
+.pickable-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.pickable-tabs button {
+  padding: 8px 12px; border: 0; border-bottom: 2px solid transparent;
+  background: transparent; color: var(--text-secondary); font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.pickable-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pickable-list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+.pickable-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-secondary);
+}
+.pickable-row-main { min-width: 0; }
+.pickable-row-top { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.pickable-section { color: var(--text-muted); font-size: 10.5px; }
+.pickable-title {
+  display: block; margin: 5px 0 0; padding: 0; border: 0; background: transparent;
+  color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 700; text-align: left; cursor: pointer;
+}
+.pickable-title:hover { color: var(--accent); }
+.pickable-checks { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 6px; font-size: 10.5px; }
+.pickable-checks .passed { color: #15803d; }
+.pickable-checks .missing { color: #b45309; }
+.pickable-assignee { color: var(--text-muted); }
+.pickable-row-actions { flex-shrink: 0; }
+.pickable-row-actions .btn-primary, .pickable-row-actions .btn-secondary { font-size: 11.5px; padding: 6px 10px; }
+.readiness-badge {
+  display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase;
+}
+.readiness-badge-ready { background: color-mix(in srgb, #22c55e 14%, transparent); color: #15803d; }
+.readiness-badge-needs_context { background: color-mix(in srgb, #f59e0b 16%, transparent); color: #b45309; }
+.readiness-badge-blocked { background: color-mix(in srgb, #ef4444 13%, transparent); color: #b91c1c; }
+.readiness-badge-not_applicable { background: var(--bg-tertiary); color: var(--text-muted); }
+.readiness-config { width: min(560px, 100%); }
+.readiness-config-list { display: flex; flex-direction: column; gap: 4px; }
+.readiness-config-row {
+  display: flex; align-items: center; gap: 8px; padding: 9px 10px;
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 12.5px;
+}
+.readiness-config-row input { accent-color: var(--accent); }
+
+@media (max-width: 700px) {
+  .pickable-overlay { padding: 8px; }
+  .pickable-panel { padding: 14px; max-height: 96vh; }
+  .pickable-row { flex-direction: column; }
+  .pickable-row-actions { width: 100%; }
+  .pickable-row-actions button { width: 100%; }
+  .pickable-trigger { margin-left: 0; }
+}

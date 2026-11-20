@@ -5,6 +5,7 @@ import { requireTaskAccess, ensureSectionAccess } from '../lib/access';
 import { notify } from '../lib/notify';
 import { logActivity, logTaskEvent } from '../lib/activity';
 import { buildPickupBrief } from '../lib/pickupBrief';
+import { computeReadiness, DEFAULT_READY_CONFIG } from '../lib/readiness';
 
 const router = Router();
 router.use(authMiddleware);
@@ -27,6 +28,18 @@ function optionalText(value: unknown, field: string): string | null | undefined 
   if (trimmed.length === 0) return null;
   if (trimmed.length > TASK_TEXT_LIMITS[field]) return undefined;
   return trimmed;
+}
+
+async function readinessConfigFor(projectId: string) {
+  return (await prisma.projectReadyConfig.findUnique({
+    where: { projectId },
+    select: {
+      requireContext: true,
+      requireAcceptanceCriteria: true,
+      requireNoBlockers: true,
+      requireDocument: true,
+    },
+  })) ?? DEFAULT_READY_CONFIG;
 }
 
 const TASK_DETAIL_INCLUDE = {
@@ -87,7 +100,8 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
-    res.json(task);
+    const readiness = computeReadiness(task, await readinessConfigFor(task.section.project.id));
+    res.json({ ...task, readiness });
   } catch (error) {
     console.error('Get task error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -222,8 +236,9 @@ router.get('/:id/context', async (req: AuthRequest, res: Response): Promise<void
       take: 8,
       select: { action: true, actorName: true, createdAt: true },
     });
-    const brief = buildPickupBrief(task, activity);
-    res.json({ taskId: task.id, generatedAt: new Date().toISOString(), brief });
+    const readiness = computeReadiness(task, await readinessConfigFor(task.section.project.id));
+    const brief = buildPickupBrief(task, activity, readiness);
+    res.json({ taskId: task.id, generatedAt: new Date().toISOString(), readiness, brief });
   } catch (error) {
     console.error('Get task context error:', error);
     res.status(500).json({ error: 'Internal server error' });

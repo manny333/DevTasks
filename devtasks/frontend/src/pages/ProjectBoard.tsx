@@ -15,6 +15,7 @@ const ListView = lazy(() => import('../components/ListView/ListView'));
 const GanttBoard = lazy(() => import('../components/Gantt/GanttBoard'));
 const ProjectDocs = lazy(() => import('../components/Docs/ProjectDocs'));
 const ProjectPassport = lazy(() => import('../components/Project/ProjectPassport'));
+const PickablePanel = lazy(() => import('../components/Pickable/PickablePanel'));
 const TaskModal = lazy(() => import('../components/Kanban/TaskModal'));
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -43,6 +44,7 @@ export default function ProjectBoard() {
   const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt' | 'docs' | 'passport'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showAIImport, setShowAIImport] = useState(false);
+  const [showPickable, setShowPickable] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -323,6 +325,15 @@ export default function ProjectBoard() {
             </svg>
             {t('docs.title')}
           </button>
+          <button
+            className="calendar-view-btn pickable-trigger"
+            onClick={() => setShowPickable(true)}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            {t('pickable.open')}
+          </button>
         </div>
 
         <Suspense fallback={<div className="loading-screen"><div className="spinner" /></div>}>
@@ -422,6 +433,17 @@ export default function ProjectBoard() {
             }
           }}
         />
+      )}
+
+      {showPickable && (
+        <Suspense fallback={null}>
+          <PickablePanel
+            projectId={project.id}
+            canManageConfig={canArchiveDocs}
+            onClose={() => setShowPickable(false)}
+            onOpenTask={(task) => setSelectedTask(task)}
+          />
+        </Suspense>
       )}
     </div>
   );

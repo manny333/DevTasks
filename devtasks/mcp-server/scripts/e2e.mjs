@@ -108,6 +108,26 @@ const passport = {
   profile,
 };
 
+const pickable = {
+  tasks: [{
+    ...tasks[0],
+    section: { id: 'sec1', name: 'Backlog' },
+    readiness: {
+      state: 'READY',
+      pickable: true,
+      checks: [
+        { code: 'CONTEXT', passed: true, required: true },
+        { code: 'ACCEPTANCE', passed: true, required: true },
+        { code: 'BLOCKERS', passed: true, required: true },
+        { code: 'DOCUMENT', passed: false, required: false },
+      ],
+      blockedBy: [],
+    },
+  }],
+  counts: { ready: 1, needsContext: 0, blocked: 0, pickable: 1 },
+  config: { projectId: 'p1', requireContext: true, requireAcceptanceCriteria: true, requireNoBlockers: true, requireDocument: false },
+};
+
 const taskDetail = {
   ...tasks[0],
   section: { id: 'sec1', name: 'Backlog', project: { id: 'p1', name: 'Demo Project', slug: 'demo' } },
@@ -217,6 +237,10 @@ const apiServer = http.createServer(async (req, res) => {
     sendJson(res, 200, passport);
     return;
   }
+  if (req.method === 'GET' && path === '/api/projects/p1/pickable') {
+    sendJson(res, 200, pickable);
+    return;
+  }
   if (req.method === 'GET' && path === '/api/projects/p1/members') {
     sendJson(res, 200, [{ id: 'm1', role: 'OWNER', accessType: 'FULL', user }]);
     return;
@@ -258,7 +282,7 @@ try {
 
   const tools = await client.listTools();
   const toolNames = tools.tools.map((tool) => tool.name).sort();
-  check('lists 35 tools', toolNames.length === 35, `${toolNames.length}: ${toolNames.join(', ')}`);
+  check('lists 36 tools', toolNames.length === 36, `${toolNames.length}: ${toolNames.join(', ')}`);
 
   const projectsResult = await client.callTool({ name: 'list_projects', arguments: {} });
   check('list_projects returns the project', textOf(projectsResult).includes('Demo Project'));
@@ -317,6 +341,9 @@ try {
   const passportTool = await client.callTool({ name: 'get_project_passport', arguments: { projectSlug: 'demo' } });
   check('get_project_passport returns operational context', textOf(passportTool).includes('## Setup'));
 
+  const pickableTool = await client.callTool({ name: 'list_pickable_tasks', arguments: { projectSlug: 'demo' } });
+  check('list_pickable_tasks returns available work', textOf(pickableTool).includes('Available: 1'));
+
   const health = await client.callTool({ name: 'project_health', arguments: { projectSlug: 'demo' } });
   check('project_health summarizes the project', textOf(health).includes('Completion'));
 
@@ -336,6 +363,7 @@ try {
   check('lists the project resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}'));
   check('lists the document resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}/documents/{documentId}'));
   check('lists the passport resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}/passport'));
+  check('lists the pickable resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}/pickable'));
 
   const resource = await client.readResource({ uri: 'kanvy://projects/demo' });
   check('reads a project resource', (resource.contents[0]?.text ?? '').includes('# Demo Project'));
@@ -351,6 +379,9 @@ try {
 
   const passportResource = await client.readResource({ uri: 'kanvy://projects/demo/passport' });
   check('reads the passport resource', (passportResource.contents[0]?.text ?? '').includes('## Setup'));
+
+  const pickableResource = await client.readResource({ uri: 'kanvy://projects/demo/pickable' });
+  check('reads the pickable resource', (pickableResource.contents[0]?.text ?? '').includes('Ready to take'));
 
   const prompts = await client.listPrompts();
   check('lists the status report prompt', prompts.prompts.some((p) => p.name === 'project_status_report'));

@@ -10,6 +10,7 @@ import type {
   ProjectDocument,
   ProjectDocumentSummary,
   ProjectPassport,
+  PickableResponse,
   SearchResults,
   SectionSummary,
   SubtaskItem,
@@ -361,6 +362,32 @@ export function formatProjectPassport(passport: ProjectPassport): string {
   if (profile.startHere) lines.push('', '## Start here', '', profile.startHere);
   if (profile.updatedAt) {
     lines.push('', `_Updated ${formatDate(profile.updatedAt)}${profile.updatedBy?.name ? ` by ${profile.updatedBy.name}` : ''}._`);
+  }
+  return lines.join('\n');
+}
+
+export function formatPickableTasks(response: PickableResponse): string {
+  const { counts, tasks } = response;
+  const lines = [
+    '# Ready to take',
+    '',
+    `- Available: ${counts.pickable}`,
+    `- Ready (including assigned): ${counts.ready}`,
+    `- Needs context: ${counts.needsContext}`,
+    `- Blocked: ${counts.blocked}`,
+    '',
+  ];
+  if (tasks.length === 0) {
+    lines.push('No tasks match this filter.');
+    return lines.join('\n');
+  }
+  for (const task of tasks) {
+    const parts = [`- [${task.status}] **${task.title}** (\`${task.id}\`)`];
+    if (task.section?.name) parts.push(task.section.name);
+    parts.push(`readiness ${task.readiness.state}`);
+    if (task.readiness.pickable) parts.push('available');
+    if (task.readiness.blockedBy.length > 0) parts.push(`blocked by ${task.readiness.blockedBy.join(', ')}`);
+    lines.push(parts.join(' · '));
   }
   return lines.join('\n');
 }

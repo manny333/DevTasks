@@ -37,6 +37,8 @@ export interface PickupActivity {
   createdAt: Date;
 }
 
+import type { Readiness } from './readiness';
+
 function date(value?: Date | null): string {
   return value ? value.toISOString().slice(0, 10) : 'sin fecha';
 }
@@ -46,7 +48,11 @@ function section(title: string, body?: string | null): string[] {
 }
 
 /** Builds a deterministic Markdown brief that anyone can use to pick up a task. */
-export function buildPickupBrief(task: PickupTask, activity: PickupActivity[] = []): string {
+export function buildPickupBrief(
+  task: PickupTask,
+  activity: PickupActivity[] = [],
+  readiness?: Readiness
+): string {
   const lines = [
     `# Pickup Brief — ${task.title}`,
     '',
@@ -55,7 +61,25 @@ export function buildPickupBrief(task: PickupTask, activity: PickupActivity[] = 
     `- Project: ${task.section?.project?.name ?? 'unknown'} (\`${task.section?.project?.slug ?? '?'}\`)`,
     `- Section: ${task.section?.name ?? 'unknown'}`,
     `- Dates: start ${date(task.startDate)} · due ${date(task.dueDate)}`,
+    ...(readiness ? [`- Readiness: **${readiness.state}**`] : []),
   ];
+
+  if (readiness) {
+    const failed = readiness.checks.filter((check) => check.required && !check.passed);
+    for (const check of failed) {
+      const label = check.code === 'CONTEXT'
+        ? 'falta contexto'
+        : check.code === 'ACCEPTANCE'
+          ? 'faltan criterios de aceptación'
+          : check.code === 'DOCUMENT'
+            ? 'falta un documento relacionado'
+            : 'hay bloqueos';
+      lines.push(`- ⚠️ ${label}`);
+    }
+    if (readiness.blockedBy.length > 0) {
+      lines.push(`- Bloqueada por: ${readiness.blockedBy.join(', ')}`);
+    }
+  }
 
   const assignees = (task.assignees ?? [])
     .map((assignee) => assignee.user?.name)

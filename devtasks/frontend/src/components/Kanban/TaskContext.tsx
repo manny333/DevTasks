@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import { getApiErrorMessage } from '../../utils/errors';
 import { useAuth } from '../../context/AuthContext';
-import type { ProjectDocumentSummary, Task } from '../../types';
+import type { ProjectDocumentSummary, Readiness, Task } from '../../types';
 
 interface TaskContextProps {
   task: Task;
@@ -194,6 +194,10 @@ export default function TaskContext({ task, projectId, canEdit, onUpdate }: Task
 
       {error && <div className="docs-error">{error}</div>}
 
+      {task.readiness && task.readiness.state !== 'NOT_APPLICABLE' && (
+        <ReadinessSummary readiness={task.readiness} />
+      )}
+
       {!hasContext && (
         <p className="task-context-empty">{t('taskContext.empty')}</p>
       )}
@@ -353,6 +357,31 @@ function ContextBlock({ title, value }: { title: string; value: string }) {
       <div className="task-context-markdown markdown-body">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
       </div>
+    </div>
+  );
+}
+
+function ReadinessSummary({ readiness }: { readiness: Readiness }) {
+  const { t } = useTranslation();
+  return (
+    <div className={`task-readiness task-readiness-${readiness.state.toLowerCase()}`}>
+      <div className="task-readiness-head">
+        <span className="task-readiness-state">{t(`readiness.state.${readiness.state}`)}</span>
+        {readiness.pickable && <span className="task-readiness-pickable">{t('readiness.pickable')}</span>}
+      </div>
+      <div className="task-readiness-checks">
+        {readiness.checks.map((check) => (
+          <span
+            key={check.code}
+            className={`task-readiness-check ${check.passed ? 'passed' : 'missing'} ${check.required ? 'required' : 'optional'}`}
+          >
+            {check.passed ? '✓' : '✗'} {t(`readiness.check.${check.code}`)}
+          </span>
+        ))}
+      </div>
+      {readiness.blockedBy.length > 0 && (
+        <p className="task-readiness-blocked">{t('readiness.blockedBy', { names: readiness.blockedBy.join(', ') })}</p>
+      )}
     </div>
   );
 }

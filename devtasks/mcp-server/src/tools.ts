@@ -14,6 +14,7 @@ import {
   formatProjectLine,
   formatProjectMarkdown,
   formatProjectPassport,
+  formatPickableTasks,
   formatSearchResults,
   formatSubtasks,
   formatTags,
@@ -115,6 +116,12 @@ export interface ToolHandlers {
   }) => Promise<string>;
   get_project_context: (input: { projectSlug: string }) => Promise<string>;
   get_project_passport: (input: { projectSlug: string }) => Promise<string>;
+  list_pickable_tasks: (input: {
+    projectSlug: string;
+    state?: 'READY' | 'NEEDS_CONTEXT' | 'BLOCKED' | 'ALL';
+    includeAssigned?: boolean;
+    limit?: number;
+  }) => Promise<string>;
 }
 
 const DEFAULT_LIMIT = 25;
@@ -443,6 +450,15 @@ export function createToolHandlers(client: KanvyClient, options: ToolOptions): T
     get_project_passport: async ({ projectSlug }) => {
       const project = await client.getProject(projectSlug);
       return formatProjectPassport(await client.getProjectPassport(project.id));
+    },
+
+    list_pickable_tasks: async ({ projectSlug, state, includeAssigned, limit }) => {
+      const project = await client.getProject(projectSlug);
+      return formatPickableTasks(await client.listPickableTasks(project.id, {
+        state: state ?? 'READY',
+        includeAssigned: includeAssigned ?? false,
+        limit,
+      }));
     },
   };
 }
@@ -1005,5 +1021,24 @@ export function registerTools(server: McpServer, handlers: ToolHandlers): void {
       annotations: readOnly,
     },
     async ({ projectSlug }) => run(() => handlers.get_project_passport({ projectSlug }))
+  );
+
+  server.registerTool(
+    'list_pickable_tasks',
+    {
+      title: 'List Kanvy pickable tasks',
+      description:
+        'List tasks by Definition of Ready state. Defaults to tasks available to take (READY and unassigned).',
+      inputSchema: z.object({
+        projectSlug: z.string().min(1).describe('Project slug'),
+        state: z.enum(['READY', 'NEEDS_CONTEXT', 'BLOCKED', 'ALL']).optional()
+          .describe('Readiness filter (default READY)'),
+        includeAssigned: z.boolean().optional().describe('Include already-assigned tasks'),
+        limit: z.number().int().min(1).max(100).optional(),
+      }),
+      annotations: readOnly,
+    },
+    async ({ projectSlug, state, includeAssigned, limit }) =>
+      run(() => handlers.list_pickable_tasks({ projectSlug, state, includeAssigned, limit }))
   );
 }

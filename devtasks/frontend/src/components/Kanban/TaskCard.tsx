@@ -112,6 +112,14 @@ export default function TaskCard({ task, canEdit = true, onClick, isDragging, on
           </button>
         )}
         <p className="task-card-title">{task.title}</p>
+        {task.readiness && task.readiness.state !== 'NOT_APPLICABLE' && (
+          <span
+            className={`task-card-readiness task-card-readiness-${task.readiness.state.toLowerCase()}`}
+            title={t(`readiness.state.${task.readiness.state}`)}
+          >
+            {task.readiness.state === 'READY' ? '●' : task.readiness.state === 'BLOCKED' ? '⊘' : '◐'}
+          </span>
+        )}
         {task.tags.length > 0 && (
           <div className="task-card-tags">
             {task.tags.filter(tt => tt?.tag).map(({ tag }) => (

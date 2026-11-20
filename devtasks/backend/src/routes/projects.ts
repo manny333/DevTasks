@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { getProjectScope, requireProjectAccess } from '../lib/access';
+import { computeReadiness, DEFAULT_READY_CONFIG } from '../lib/readiness';
 
 const router = Router();
 router.use(authMiddleware);
@@ -236,6 +237,23 @@ router.get('/:slug', async (req: AuthRequest, res: Response): Promise<void> => {
         );
       members = [];
     }
+
+    const readinessConfig = (await prisma.projectReadyConfig.findUnique({
+      where: { projectId: project.id },
+      select: {
+        requireContext: true,
+        requireAcceptanceCriteria: true,
+        requireNoBlockers: true,
+        requireDocument: true,
+      },
+    })) ?? DEFAULT_READY_CONFIG;
+    sections = sections.map((section) => ({
+      ...section,
+      tasks: section.tasks.map((task) => ({
+        ...task,
+        readiness: computeReadiness(task, readinessConfig),
+      })),
+    }));
 
     res.json({
       ...project,

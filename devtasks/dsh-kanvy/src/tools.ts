@@ -14,6 +14,7 @@ import {
   formatProjectLine,
   formatProjectMarkdown,
   formatProjectPassport,
+  formatPickableTasks,
   formatSearchResults,
   formatTags,
   formatTaskDetail,
@@ -868,6 +869,33 @@ export function createKanvyTools(client: KanvyClient, options: KanvyToolOptions)
       async execute({ projectSlug }) {
         const project = await client.getProject(projectSlug);
         return text(formatProjectPassport(await client.getProjectPassport(project.id)));
+      },
+    }),
+
+    defineTool({
+      name: 'kanvy_list_pickable_tasks',
+      description:
+        'List tasks by Definition of Ready. Defaults to tasks available to take (READY and unassigned).',
+      parameters: {
+        projectSlug: { type: 'string', required: true, description: 'Project slug' },
+        state: {
+          type: 'string',
+          enum: ['READY', 'NEEDS_CONTEXT', 'BLOCKED', 'ALL'],
+          description: 'Readiness filter (default READY)',
+        },
+        includeAssigned: { type: 'boolean', description: 'Include already-assigned tasks' },
+        limit: { type: 'integer', description: 'Max tasks (1-100, default 50)' },
+      },
+      output: TEXT_OUTPUT,
+      timeoutMs,
+      isConcurrencySafe: () => true,
+      async execute({ projectSlug, state, includeAssigned, limit }) {
+        const project = await client.getProject(projectSlug);
+        return text(formatPickableTasks(await client.listPickableTasks(project.id, {
+          state: state ?? 'READY',
+          includeAssigned: includeAssigned ?? false,
+          limit: clampLimit(limit, 50),
+        })));
       },
     }),
   ];

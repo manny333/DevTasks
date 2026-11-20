@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { getSectionAccess, canEdit, requireSectionAccess } from '../lib/access';
+import { computeReadiness, DEFAULT_READY_CONFIG } from '../lib/readiness';
 import { logActivity } from '../lib/activity';
 
 const router = Router();
@@ -159,9 +160,24 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
       take: pageSize,
       skip,
     });
+    const section = await prisma.section.findUnique({
+      where: { id: req.params.sectionId as string },
+      select: { projectId: true },
+    });
+    const readinessConfig = section
+      ? (await prisma.projectReadyConfig.findUnique({
+        where: { projectId: section.projectId },
+        select: {
+          requireContext: true,
+          requireAcceptanceCriteria: true,
+          requireNoBlockers: true,
+          requireDocument: true,
+        },
+      })) ?? DEFAULT_READY_CONFIG
+      : DEFAULT_READY_CONFIG;
     res.setHeader('X-Page-Limit', String(pageSize));
     res.setHeader('X-Page-Offset', String(skip));
-    res.json(tasks);
+    res.json(tasks.map((task) => ({ ...task, readiness: computeReadiness(task, readinessConfig) })));
   } catch (error) {
     console.error('List tasks error:', error);
     res.status(500).json({ error: 'Internal server error' });

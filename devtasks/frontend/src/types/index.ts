@@ -67,6 +67,38 @@ export interface TaskDocumentLink {
   };
 }
 
+export type ReadinessState = 'READY' | 'NEEDS_CONTEXT' | 'BLOCKED' | 'NOT_APPLICABLE';
+export type ReadinessCode = 'CONTEXT' | 'ACCEPTANCE' | 'BLOCKERS' | 'DOCUMENT';
+
+export interface ReadinessCheck {
+  code: ReadinessCode;
+  passed: boolean;
+  required: boolean;
+}
+
+export interface Readiness {
+  state: ReadinessState;
+  pickable: boolean;
+  checks: ReadinessCheck[];
+  blockedBy: string[];
+}
+
+export interface ReadyConfig {
+  projectId: string;
+  requireContext: boolean;
+  requireAcceptanceCriteria: boolean;
+  requireNoBlockers: boolean;
+  requireDocument: boolean;
+  updatedBy?: { id: string; name: string; email?: string } | null;
+  updatedAt?: string | null;
+}
+
+export interface PickableResponse {
+  tasks: Task[];
+  counts: { ready: number; needsContext: number; blocked: number; pickable: number };
+  config: ReadyConfig;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -92,6 +124,8 @@ export interface Task {
   blockedBy?: TaskDependency[];
   blocks?: TaskDependency[];
   documents?: TaskDocumentLink[];
+  readiness?: Readiness;
+  section?: { id: string; name: string };
   _count: { comments: number; subtasks?: number };
 }
 

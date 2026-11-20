@@ -20,6 +20,7 @@ import type {
   TaskStatus,
   TaskSummary,
   TaskContextBrief,
+  PickableResponse,
 } from './types.js';
 
 export interface KanvyClientOptions {
@@ -152,6 +153,20 @@ export class KanvyClient {
 
   getTaskContext(taskId: string): Promise<TaskContextBrief> {
     return this.request<TaskContextBrief>(`/tasks/${encodeURIComponent(taskId)}/context`);
+  }
+
+  listPickableTasks(
+    projectId: string,
+    options: { state?: string; includeAssigned?: boolean; limit?: number } = {}
+  ): Promise<PickableResponse> {
+    const params = new URLSearchParams({
+      state: options.state ?? 'ALL',
+      includeAssigned: String(options.includeAssigned ?? true),
+      limit: String(options.limit ?? 50),
+    });
+    return this.request<PickableResponse>(
+      `/projects/${encodeURIComponent(projectId)}/pickable?${params.toString()}`
+    );
   }
 
   updateTask(

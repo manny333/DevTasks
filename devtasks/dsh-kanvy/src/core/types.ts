@@ -207,3 +207,31 @@ export interface TaskContextBrief {
   generatedAt: string;
   brief: string;
 }
+
+export type ReadinessState = 'READY' | 'NEEDS_CONTEXT' | 'BLOCKED' | 'NOT_APPLICABLE';
+
+export interface Readiness {
+  state: ReadinessState;
+  pickable: boolean;
+  checks: { code: 'CONTEXT' | 'ACCEPTANCE' | 'BLOCKERS' | 'DOCUMENT'; passed: boolean; required: boolean }[];
+  blockedBy: string[];
+}
+
+export interface ReadyConfig {
+  projectId: string;
+  requireContext: boolean;
+  requireAcceptanceCriteria: boolean;
+  requireNoBlockers: boolean;
+  requireDocument: boolean;
+}
+
+export interface PickableTask extends TaskSummary {
+  section?: { id: string; name: string };
+  readiness: Readiness;
+}
+
+export interface PickableResponse {
+  tasks: PickableTask[];
+  counts: { ready: number; needsContext: number; blocked: number; pickable: number };
+  config: ReadyConfig;
+}

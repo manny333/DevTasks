@@ -8,6 +8,7 @@ import {
   formatProjectLine,
   formatProjectMarkdown,
   formatProjectPassport,
+  formatPickableTasks,
   formatTaskDetail,
   formatTaskLine,
 } from './format.js';
@@ -296,6 +297,40 @@ export function registerResources(server: McpServer, client: KanvyClient): void 
       const passport = await client.getProjectPassport(project.id);
       return {
         contents: [{ uri: uri.href, mimeType: 'text/markdown', text: formatProjectPassport(passport) }],
+      };
+    }
+  );
+
+  const pickableTemplate = new ResourceTemplate('kanvy://projects/{slug}/pickable', {
+    list: async () => {
+      const projects = await client.listProjects();
+      return {
+        resources: projects.map((project) => ({
+          uri: `kanvy://projects/${project.slug}/pickable`,
+          name: `${project.slug}-pickable`,
+          title: `${project.name} pickable tasks`,
+          description: 'Tasks that are ready to take.',
+          mimeType: 'text/markdown',
+        })),
+      };
+    },
+  });
+
+  server.registerResource(
+    'project-pickable',
+    pickableTemplate,
+    {
+      title: 'Kanvy pickable tasks',
+      description: 'Available tasks by Definition of Ready.',
+      mimeType: 'text/markdown',
+    },
+    async (uri, variables) => {
+      const slug = variable(variables.slug);
+      if (!slug) throw new Error('Missing project slug in resource URI');
+      const project = await client.getProject(slug);
+      const pickable = await client.listPickableTasks(project.id, { state: 'ALL', includeAssigned: true });
+      return {
+        contents: [{ uri: uri.href, mimeType: 'text/markdown', text: formatPickableTasks(pickable) }],
       };
     }
   );
