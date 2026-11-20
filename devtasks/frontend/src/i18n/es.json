@@ -168,7 +168,7 @@
     "edit": "Editar",
     "close": "Cerrar",
     "loading": "Cargando...",
-    "search": "Buscar tareas y proyectos...",
+    "search": "Buscar proyectos, tareas, documentos, comentarios o personas...",
     "noResults": "Sin resultados",
     "projectNotFound": "Proyecto no encontrado",
     "notice": "Aviso"
@@ -509,5 +509,22 @@
     "saveConfigError": "No se pudo guardar la configuración.",
     "configTitle": "Definition of Ready",
     "configHint": "Define qué necesita una tarea para considerarse lista."
+  },
+  "search": {
+    "projects": "Proyectos",
+    "tasks": "Tareas",
+    "documents": "Documentación",
+    "comments": "Comentarios",
+    "people": "Personas",
+    "navigate": "navegar",
+    "open": "abrir",
+    "close": "cerrar",
+    "kind": {
+      "project": "Proyecto",
+      "task": "Tarea",
+      "document": "Documento",
+      "comment": "Comentario",
+      "person": "Persona"
+    }
   }
 }

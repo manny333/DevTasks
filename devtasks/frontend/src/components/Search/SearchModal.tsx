@@ -7,6 +7,7 @@ interface TaskResult {
   id: string;
   title: string;
   status: string;
+  context?: string | null;
   section: {
     id: string;
     name: string;
@@ -21,10 +22,56 @@ interface ProjectResult {
   description: string | null;
 }
 
+interface DocumentResult {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  project: { name: string; slug: string };
+}
+
+interface CommentResult {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: { name: string } | null;
+  task: {
+    id: string;
+    title: string;
+    section: { project: { name: string; slug: string } };
+  };
+}
+
+interface PersonResult {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  project: { name: string; slug: string } | null;
+}
+
 interface SearchResults {
   tasks: TaskResult[];
   projects: ProjectResult[];
+  documents: DocumentResult[];
+  comments: CommentResult[];
+  people: PersonResult[];
 }
+
+type Item =
+  | { kind: 'project'; value: ProjectResult }
+  | { kind: 'task'; value: TaskResult }
+  | { kind: 'document'; value: DocumentResult }
+  | { kind: 'comment'; value: CommentResult }
+  | { kind: 'person'; value: PersonResult };
+
+const EMPTY_RESULTS: SearchResults = {
+  tasks: [],
+  projects: [],
+  documents: [],
+  comments: [],
+  people: [],
+};
 
 interface SearchModalProps {
   onClose: () => void;
@@ -36,44 +83,42 @@ export default function SearchModal({ onClose }: SearchModalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResults>({ tasks: [], projects: [] });
+  const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(0);
 
-  const allItems = useMemo<Array<{ type: 'project' | 'task'; item: ProjectResult | TaskResult }>>(
-    () => [
-      ...results.projects.map((p) => ({ type: 'project' as const, item: p })),
-      ...results.tasks.map((t) => ({ type: 'task' as const, item: t })),
-    ],
-    [results]
-  );
+  const items = useMemo<Item[]>(() => [
+    ...results.projects.map((value) => ({ kind: 'project' as const, value })),
+    ...results.tasks.map((value) => ({ kind: 'task' as const, value })),
+    ...results.documents.map((value) => ({ kind: 'document' as const, value })),
+    ...results.comments.map((value) => ({ kind: 'comment' as const, value })),
+    ...results.people.map((value) => ({ kind: 'person' as const, value })),
+  ], [results]);
 
-  // Autofocus
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
-  // Debounced search
   useEffect(() => {
     if (query.length < 2) {
-      setResults({ tasks: [], projects: [] });
+      setResults(EMPTY_RESULTS);
+      setSelected(0);
       return;
     }
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/search?q=${encodeURIComponent(query)}`);
-        setResults(res.data);
+        const res = await api.get<SearchResults>(`/search?q=${encodeURIComponent(query)}`);
+        setResults({ ...EMPTY_RESULTS, ...res.data });
         setSelected(0);
       } catch {
-        // ignore
+        setResults(EMPTY_RESULTS);
       } finally {
         setLoading(false);
       }
@@ -81,27 +126,33 @@ export default function SearchModal({ onClose }: SearchModalProps) {
     return () => clearTimeout(timer);
   }, [query]);
 
-  const navigate_to = useCallback((idx: number) => {
-    const entry = allItems[idx];
-    if (!entry) return;
-    if (entry.type === 'project') {
-      navigate(`/projects/${(entry.item as ProjectResult).slug}`);
+  const openItem = useCallback((item: Item) => {
+    if (item.kind === 'project') {
+      navigate(`/projects/${item.value.slug}`);
+    } else if (item.kind === 'task') {
+      navigate(`/projects/${item.value.section.project.slug}?task=${item.value.id}`);
+    } else if (item.kind === 'document') {
+      navigate(`/projects/${item.value.project.slug}?view=docs&doc=${item.value.id}`);
+    } else if (item.kind === 'comment') {
+      navigate(`/projects/${item.value.task.section.project.slug}?task=${item.value.task.id}`);
+    } else if (item.value.project) {
+      navigate(`/projects/${item.value.project.slug}`);
     } else {
-      const task = entry.item as TaskResult;
-      navigate(`/projects/${task.section.project.slug}`);
+      navigate('/projects');
     }
     onClose();
-  }, [allItems, navigate, onClose]);
+  }, [navigate, onClose]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelected((prev) => Math.min(prev + 1, allItems.length - 1));
+      setSelected((prev) => Math.min(prev + 1, items.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setSelected((prev) => Math.max(prev - 1, 0));
     } else if (e.key === 'Enter') {
-      navigate_to(selected);
+      e.preventDefault();
+      if (items[selected]) openItem(items[selected]);
     }
   };
 
@@ -112,13 +163,33 @@ export default function SearchModal({ onClose }: SearchModalProps) {
     DONE: '#22c55e',
   };
 
+  const group = (
+    title: string,
+    values: Item[],
+    start: number,
+    render: (item: Item, index: number) => React.ReactNode
+  ) => {
+    if (values.length === 0) return null;
+    return (
+      <div className="search-group">
+        <div className="search-group-title">{title}</div>
+        {values.map((item, index) => render(item, start + index))}
+      </div>
+    );
+  };
+
+  const taskStart = results.projects.length;
+  const documentStart = taskStart + results.tasks.length;
+  const commentStart = documentStart + results.documents.length;
+  const peopleStart = commentStart + results.comments.length;
+
   return (
     <div
       className="modal-overlay search-overlay"
       ref={overlayRef}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="search-modal">
+      <div className="search-modal search-modal-universal">
         <div className="search-input-row">
           <span className="search-icon">⌘</span>
           <input
@@ -133,64 +204,124 @@ export default function SearchModal({ onClose }: SearchModalProps) {
           <kbd className="search-esc" onClick={onClose}>esc</kbd>
         </div>
 
-        {allItems.length > 0 && (
+        {items.length > 0 && (
           <div className="search-results">
-            {results.projects.length > 0 && (
-              <div className="search-group">
-                <div className="search-group-title">Proyectos</div>
-                {results.projects.map((project, i) => (
-                  <button
-                    key={project.id}
-                    className={`search-result-item ${selected === i ? 'selected' : ''}`}
-                    onClick={() => navigate_to(i)}
-                    onMouseEnter={() => setSelected(i)}
-                  >
-                    <span className="search-result-icon">📁</span>
-                    <span className="search-result-title">{project.name}</span>
-                    {project.description && (
-                      <span className="search-result-sub">{project.description}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+            {group(t('search.projects'), results.projects.map((value) => ({ kind: 'project' as const, value })), 0, (item, index) => {
+              if (item.kind !== 'project') return null;
+              return (
+                <button
+                  key={item.value.id}
+                  className={`search-result-item ${selected === index ? 'selected' : ''}`}
+                  onClick={() => openItem(item)}
+                  onMouseEnter={() => setSelected(index)}
+                >
+                  <span className="search-result-icon">📁</span>
+                  <span className="search-result-main">
+                    <span className="search-result-title">{item.value.name}</span>
+                    {item.value.description && <span className="search-result-sub">{item.value.description}</span>}
+                  </span>
+                  <span className="search-result-kind">{t('search.kind.project')}</span>
+                </button>
+              );
+            })}
 
-            {results.tasks.length > 0 && (
-              <div className="search-group">
-                <div className="search-group-title">Tareas</div>
-                {results.tasks.map((task, i) => {
-                  const idx = results.projects.length + i;
-                  return (
-                    <button
-                      key={task.id}
-                      className={`search-result-item ${selected === idx ? 'selected' : ''}`}
-                      onClick={() => navigate_to(idx)}
-                      onMouseEnter={() => setSelected(idx)}
-                    >
-                      <span
-                        className="search-result-status-dot"
-                        style={{ backgroundColor: statusColors[task.status] || '#9090a0' }}
-                      />
-                      <span className="search-result-title">{task.title}</span>
-                      <span className="search-result-sub">
-                        {task.section.project.name} › {task.section.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {group(t('search.tasks'), results.tasks.map((value) => ({ kind: 'task' as const, value })), taskStart, (item, index) => {
+              if (item.kind !== 'task') return null;
+              return (
+                <button
+                  key={item.value.id}
+                  className={`search-result-item ${selected === index ? 'selected' : ''}`}
+                  onClick={() => openItem(item)}
+                  onMouseEnter={() => setSelected(index)}
+                >
+                  <span
+                    className="search-result-status-dot"
+                    style={{ backgroundColor: statusColors[item.value.status] || '#9090a0' }}
+                  />
+                  <span className="search-result-main">
+                    <span className="search-result-title">{item.value.title}</span>
+                    <span className="search-result-sub">
+                      {item.value.section.project.name} › {item.value.section.name}
+                    </span>
+                  </span>
+                  <span className="search-result-kind">{t('search.kind.task')}</span>
+                </button>
+              );
+            })}
+
+            {group(t('search.documents'), results.documents.map((value) => ({ kind: 'document' as const, value })), documentStart, (item, index) => {
+              if (item.kind !== 'document') return null;
+              return (
+                <button
+                  key={item.value.id}
+                  className={`search-result-item ${selected === index ? 'selected' : ''}`}
+                  onClick={() => openItem(item)}
+                  onMouseEnter={() => setSelected(index)}
+                >
+                  <span className="search-result-icon">📄</span>
+                  <span className="search-result-main">
+                    <span className="search-result-title">{item.value.title}</span>
+                    <span className="search-result-sub">
+                      {item.value.project.name} · {item.value.category}
+                    </span>
+                  </span>
+                  <span className="search-result-kind">{t('search.kind.document')}</span>
+                </button>
+              );
+            })}
+
+            {group(t('search.comments'), results.comments.map((value) => ({ kind: 'comment' as const, value })), commentStart, (item, index) => {
+              if (item.kind !== 'comment') return null;
+              return (
+                <button
+                  key={item.value.id}
+                  className={`search-result-item ${selected === index ? 'selected' : ''}`}
+                  onClick={() => openItem(item)}
+                  onMouseEnter={() => setSelected(index)}
+                >
+                  <span className="search-result-icon">💬</span>
+                  <span className="search-result-main">
+                    <span className="search-result-title">{item.value.task.title}</span>
+                    <span className="search-result-sub">
+                      {item.value.author?.name ?? '—'} · {item.value.content.slice(0, 110)}
+                    </span>
+                  </span>
+                  <span className="search-result-kind">{t('search.kind.comment')}</span>
+                </button>
+              );
+            })}
+
+            {group(t('search.people'), results.people.map((value) => ({ kind: 'person' as const, value })), peopleStart, (item, index) => {
+              if (item.kind !== 'person') return null;
+              return (
+                <button
+                  key={item.value.id}
+                  className={`search-result-item ${selected === index ? 'selected' : ''}`}
+                  onClick={() => openItem(item)}
+                  onMouseEnter={() => setSelected(index)}
+                >
+                  <span className="search-result-icon">👤</span>
+                  <span className="search-result-main">
+                    <span className="search-result-title">{item.value.name}</span>
+                    <span className="search-result-sub">
+                      {item.value.email}{item.value.project ? ` · ${item.value.project.name}` : ''}
+                    </span>
+                  </span>
+                  <span className="search-result-kind">{t('search.kind.person')}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {query.length >= 2 && !loading && allItems.length === 0 && (
+        {query.length >= 2 && !loading && items.length === 0 && (
           <div className="search-empty">{t('common.noResults')}</div>
         )}
 
         <div className="search-footer">
-          <span><kbd>↑↓</kbd> navegar</span>
-          <span><kbd>↵</kbd> abrir</span>
-          <span><kbd>esc</kbd> cerrar</span>
+          <span><kbd>↑↓</kbd> {t('search.navigate')}</span>
+          <span><kbd>↵</kbd> {t('search.open')}</span>
+          <span><kbd>esc</kbd> {t('search.close')}</span>
         </div>
       </div>
     </div>

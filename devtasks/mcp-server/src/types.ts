@@ -57,6 +57,37 @@ export interface SearchTask extends TaskSummary {
 export interface SearchResults {
   projects?: ProjectSummary[];
   tasks?: SearchTask[];
+  documents?: SearchDocument[];
+  comments?: SearchComment[];
+  people?: SearchPerson[];
+}
+
+export interface SearchDocument {
+  id: string;
+  title: string;
+  slug: string;
+  category: DocumentCategory;
+  project: { name: string; slug: string };
+}
+
+export interface SearchComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  author?: { name?: string } | null;
+  task: {
+    id: string;
+    title: string;
+    section: { project: { name: string; slug: string } };
+  };
+}
+
+export interface SearchPerson {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string | null;
+  project?: { name: string; slug: string } | null;
 }
 
 export interface CommentResult {

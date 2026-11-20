@@ -21,7 +21,7 @@ Native **DeepSeek Harness** tools for [Kanvy](https://github.com/manny333/DevTas
 | `kanvy_my_tasks` | Tasks assigned to the current user |
 | `kanvy_project_health` | Completion, overdue, due-soon, unassigned, blocked |
 | `kanvy_agenda` | Tasks due in a date range |
-| `kanvy_search` | Search projects and tasks |
+| `kanvy_search` | Search projects, tasks, documents, comments and people |
 | `kanvy_whoami` | Authenticated Kanvy user |
 | `kanvy_list_documents` | Project Markdown documents |
 | `kanvy_get_document` | Full document by id or slug, with pagination |

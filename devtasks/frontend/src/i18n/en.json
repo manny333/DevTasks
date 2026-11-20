@@ -166,7 +166,7 @@
     "edit": "Edit",
     "close": "Close",
     "loading": "Loading...",
-    "search": "Search tasks and projects...",
+    "search": "Search projects, tasks, documents, comments or people...",
     "noResults": "No results found",
     "projectNotFound": "Project not found",
     "notice": "Notice"
@@ -507,5 +507,22 @@
     "saveConfigError": "Could not save the configuration.",
     "configTitle": "Definition of Ready",
     "configHint": "Define what a task needs to be considered ready."
+  },
+  "search": {
+    "projects": "Projects",
+    "tasks": "Tasks",
+    "documents": "Documentation",
+    "comments": "Comments",
+    "people": "People",
+    "navigate": "navigate",
+    "open": "open",
+    "close": "close",
+    "kind": {
+      "project": "Project",
+      "task": "Task",
+      "document": "Document",
+      "comment": "Comment",
+      "person": "Person"
+    }
   }
 }

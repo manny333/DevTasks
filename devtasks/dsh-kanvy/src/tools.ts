@@ -156,7 +156,7 @@ export function createKanvyTools(client: KanvyClient, options: KanvyToolOptions)
 
     defineTool({
       name: 'kanvy_search',
-      description: 'Search Kanvy projects and tasks by text (minimum 2 characters).',
+      description: 'Search projects, tasks, documents, comments and people by text (minimum 2 characters).',
       parameters: {
         query: { type: 'string', required: true, description: 'Search text' },
         limit: { type: 'integer', description: 'Max results per group (1-100, default 10)' },
@@ -171,6 +171,9 @@ export function createKanvyTools(client: KanvyClient, options: KanvyToolOptions)
         return text(formatSearchResults({
           projects: (results.projects ?? []).slice(0, pageSize),
           tasks: (results.tasks ?? []).slice(0, pageSize),
+          documents: (results.documents ?? []).slice(0, pageSize),
+          comments: (results.comments ?? []).slice(0, pageSize),
+          people: (results.people ?? []).slice(0, pageSize),
         }));
       },
     }),

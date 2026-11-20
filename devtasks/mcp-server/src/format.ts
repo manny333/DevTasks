@@ -121,6 +121,30 @@ export function formatSearchResults(results: SearchResults): string {
     }
   }
 
+  const documents = results.documents ?? [];
+  if (documents.length > 0) {
+    sections.push(`## Documents (${documents.length})`);
+    for (const document of documents) {
+      sections.push(`- **${document.title}** (\`${document.slug}\`) · ${document.category} · ${document.project.name} (\`${document.project.slug}\`)`);
+    }
+  }
+
+  const comments = results.comments ?? [];
+  if (comments.length > 0) {
+    sections.push(`## Comments (${comments.length})`);
+    for (const comment of comments) {
+      sections.push(`- **${comment.author?.name ?? 'Someone'}** on ${comment.task.title}: ${truncate(comment.content.replace(/\s+/g, ' '), 240)}`);
+    }
+  }
+
+  const people = results.people ?? [];
+  if (people.length > 0) {
+    sections.push(`## People (${people.length})`);
+    for (const person of people) {
+      sections.push(`- ${person.name} <${person.email}>${person.project ? ` · ${person.project.name}` : ''}`);
+    }
+  }
+
   if (sections.length === 0) return 'No matches.';
   return sections.join('\n');
 }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import type { Project, Section, Tag, Task } from '../types';
@@ -30,6 +30,10 @@ const SECTION_COLORS = [
 
 export default function ProjectBoard() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const taskParam = searchParams.get('task');
+  const viewParam = searchParams.get('view');
+  const docParam = searchParams.get('doc');
   const { t } = useTranslation();
   const [project, setProject] = useState<Project | null>(null);
   const [activeSection, setActiveSection] = useState<Section | null>(null);
@@ -49,6 +53,32 @@ export default function ProjectBoard() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
+
+  useEffect(() => {
+    if (viewParam && ['kanban', 'calendar', 'list', 'gantt', 'docs', 'passport'].includes(viewParam)) {
+      setViewMode(viewParam as 'kanban' | 'calendar' | 'list' | 'gantt' | 'docs' | 'passport');
+    }
+  }, [viewParam]);
+
+  useEffect(() => {
+    if (!taskParam) return;
+    let cancelled = false;
+    api.get<Task>(`/tasks/${taskParam}`)
+      .then((res) => {
+        if (!cancelled) setSelectedTask(res.data);
+      })
+      .catch(() => { /* task may no longer be accessible */ });
+    return () => { cancelled = true; };
+  }, [taskParam]);
+
+  const closeTask = () => {
+    setSelectedTask(null);
+    if (taskParam) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('task');
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -370,6 +400,7 @@ export default function ProjectBoard() {
             projectId={project.id}
             canEdit={canManageProject}
             canArchive={canArchiveDocs}
+            initialDocumentId={docParam ?? undefined}
           />
         ) : (
           <GanttBoard
@@ -390,7 +421,7 @@ export default function ProjectBoard() {
           canEdit={canEdit}
           allSections={project.sections || []}
           onMoveSection={handleMoveSection}
-          onClose={() => setSelectedTask(null)}
+          onClose={closeTask}
           onUpdate={(updated) => setSelectedTask(updated)}
           onDelete={async () => setSelectedTask(null)}
         />

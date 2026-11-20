@@ -177,6 +177,9 @@ export function createToolHandlers(client: KanvyClient, options: ToolOptions): T
       const trimmed = {
         projects: (results.projects ?? []).slice(0, pageSize),
         tasks: (results.tasks ?? []).slice(0, pageSize),
+        documents: (results.documents ?? []).slice(0, pageSize),
+        comments: (results.comments ?? []).slice(0, pageSize),
+        people: (results.people ?? []).slice(0, pageSize),
       };
       return formatSearchResults(trimmed);
     },
@@ -555,7 +558,7 @@ export function registerTools(server: McpServer, handlers: ToolHandlers): void {
     'search',
     {
       title: 'Search Kanvy',
-      description: 'Search projects and tasks by text (minimum 2 characters).',
+      description: 'Search projects, tasks, documents, comments and people by text (minimum 2 characters).',
       inputSchema: z.object({
         query: z.string().min(2).max(200).describe('Search text'),
         limit: z.number().int().min(1).max(MAX_LIMIT).optional().describe('Max results per group (default 10)'),

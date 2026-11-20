@@ -24,6 +24,7 @@ interface ProjectDocsProps {
   projectId: string;
   canEdit: boolean;
   canArchive: boolean;
+  initialDocumentId?: string;
 }
 
 interface EditorState {
@@ -40,7 +41,7 @@ function formatDate(value: string): string {
   return new Date(value).toLocaleDateString();
 }
 
-export default function ProjectDocs({ projectId, canEdit, canArchive }: ProjectDocsProps) {
+export default function ProjectDocs({ projectId, canEdit, canArchive, initialDocumentId }: ProjectDocsProps) {
   const { t } = useTranslation();
   const [documents, setDocuments] = useState<ProjectDocumentSummary[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -58,6 +59,10 @@ export default function ProjectDocs({ projectId, canEdit, canArchive }: ProjectD
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (initialDocumentId) setSelectedId(initialDocumentId);
+  }, [initialDocumentId]);
 
   const categoryLabel = (value: DocumentCategory) => t(`docs.categories.${value}`);
 
