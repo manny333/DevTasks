@@ -202,7 +202,9 @@ export default function ProjectDocs({ projectId, canEdit, canArchive }: ProjectD
         created: ProjectDocument[];
         skipped: { filename: string; documentId: string }[];
         imported: number;
-      }>(`/projects/${projectId}/documents/import`, form);
+      }>(`/projects/${projectId}/documents/import`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       const created = res.data.created ?? [];
       const skipped = res.data.skipped ?? [];
       if (created[0]) {
