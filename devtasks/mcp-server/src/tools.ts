@@ -43,6 +43,7 @@ export interface ToolHandlers {
   create_task: (input: CreateTaskInput & { sectionId: string }) => Promise<string>;
   add_comment: (input: { taskId: string; content: string }) => Promise<string>;
   get_task: (input: { taskId: string }) => Promise<string>;
+  get_task_context: (input: { taskId: string }) => Promise<string>;
   update_task: (input: {
     taskId: string;
     title?: string;
@@ -192,6 +193,11 @@ export function createToolHandlers(client: KanvyClient, options: ToolOptions): T
     },
 
     get_task: async ({ taskId }) => formatTaskDetail(await client.getTask(taskId)),
+
+    get_task_context: async ({ taskId }) => {
+      const context = await client.getTaskContext(taskId);
+      return context.brief;
+    },
 
     update_task: async ({ taskId, title, description, startDate, dueDate }) => {
       assertWrites();
@@ -588,6 +594,18 @@ export function registerTools(server: McpServer, handlers: ToolHandlers): void {
       annotations: readOnly,
     },
     async ({ taskId }) => run(() => handlers.get_task({ taskId }))
+  );
+
+  server.registerTool(
+    'get_task_context',
+    {
+      title: 'Get Kanvy Pickup Brief',
+      description:
+        'Get a Pickup Brief for a task: context, acceptance criteria, out-of-scope, technical notes, linked documents, dependencies, repo/PR and recent activity.',
+      inputSchema: z.object({ taskId: z.string().min(1).describe('Task id') }),
+      annotations: readOnly,
+    },
+    async ({ taskId }) => run(() => handlers.get_task_context({ taskId }))
   );
 
   server.registerTool(

@@ -193,6 +193,11 @@ router.get('/:slug', async (req: AuthRequest, res: Response): Promise<void> => {
                 blockedBy: {
                   include: { dependsOn: { select: { id: true, title: true, status: true } } },
                 },
+                documents: {
+                  include: {
+                    document: { select: { id: true, title: true, slug: true, category: true, isPinned: true } },
+                  },
+                },
                 _count: { select: { comments: true, subtasks: true } },
               },
             },

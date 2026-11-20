@@ -181,6 +181,14 @@ model Task {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  context            String? @db.Text
+  acceptanceCriteria String? @db.Text
+  outOfScope         String? @db.Text
+  technicalNotes     String? @db.Text
+  repoUrl            String?
+  branch             String?
+  prUrl              String?
+
   sectionId String
   section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
 
@@ -192,8 +200,20 @@ model Task {
   activities  ActivityLog[]    @relation("TaskActivities")
   blockedBy   TaskDependency[] @relation("TaskBlockedBy")
   blocks      TaskDependency[] @relation("TaskBlocks")
+  documents   TaskDocument[]
 
   @@index([sectionId])
+}
+
+model TaskDocument {
+  taskId     String
+  task       Task            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  documentId String
+  document   ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+
+  @@id([taskId, documentId])
+  @@index([documentId])
 }
 
 model Subtask {
@@ -263,6 +283,7 @@ model ProjectDocument {
   updatedAt DateTime @updatedAt
 
   versions ProjectDocumentVersion[]
+  tasks    TaskDocument[]
 
   @@unique([projectId, slug])
   @@index([projectId, category])

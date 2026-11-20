@@ -42,6 +42,11 @@ function fakeClient(overrides = {}) {
       subtasks: [{ id: 'sub1', title: 'Check', completed: false }],
     }),
     getMe: async () => ({ id: 'u1', name: 'Emmanuel', email: 'em@example.com' }),
+    getTaskContext: async () => ({
+      taskId: 't1',
+      generatedAt: '2026-11-20T00:00:00.000Z',
+      brief: '# Pickup Brief — First task\n\n## Qué hay que lograr\n\nFinish it.',
+    }),
     updateTask: async (_taskId, input) => ({ id: 't1', title: input.title ?? 'First task', status: 'TODO' }),
     listDocuments: async () => [{
       id: 'doc1',
@@ -106,7 +111,7 @@ function byName(tools) {
   return Object.fromEntries(tools.map((tool) => [tool.name, tool]));
 }
 
-test('tools: registers all 34 native tools', () => {
+test('tools: registers all 35 native tools', () => {
   const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
   assert.deepEqual(Object.keys(tools).sort(), [
     'kanvy_add_comment',
@@ -127,6 +132,7 @@ test('tools: registers all 34 native tools', () => {
     'kanvy_get_project_context',
     'kanvy_get_project_passport',
     'kanvy_get_task',
+    'kanvy_get_task_context',
     'kanvy_list_activity',
     'kanvy_list_attachments',
     'kanvy_list_comments',
@@ -199,6 +205,13 @@ test('tools: get_task renders the full detail', async () => {
   assert.match(result.text, /# First task/);
   assert.match(result.text, /Section: Backlog/);
   assert.match(result.text, /Check/);
+});
+
+test('tools: get_task_context returns the Pickup Brief', async () => {
+  const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
+  const result = await tools.kanvy_get_task_context.execute({ taskId: 't1' }, {});
+  assert.match(result.text, /Pickup Brief/);
+  assert.match(result.text, /Finish it/);
 });
 
 test('tools: whoami uses the authenticated user', async () => {

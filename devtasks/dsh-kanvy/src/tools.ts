@@ -246,6 +246,22 @@ export function createKanvyTools(client: KanvyClient, options: KanvyToolOptions)
     }),
 
     defineTool({
+      name: 'kanvy_get_task_context',
+      description:
+        'Get a Pickup Brief for a task: context, acceptance criteria, out-of-scope, technical notes, linked documents, dependencies, repo/PR and recent activity.',
+      parameters: {
+        taskId: { type: 'string', required: true, description: 'Task id' },
+      },
+      output: TEXT_OUTPUT,
+      timeoutMs,
+      isConcurrencySafe: () => true,
+      async execute({ taskId }) {
+        const context = await client.getTaskContext(taskId);
+        return text(context.brief);
+      },
+    }),
+
+    defineTool({
       name: 'kanvy_update_task',
       description: 'Update a task title, description, start date or due date. Requires allowWrites: true.',
       parameters: {

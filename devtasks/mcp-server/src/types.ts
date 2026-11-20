@@ -201,3 +201,9 @@ export interface ProjectPassport {
   project: { id: string; name: string; slug: string; description?: string | null; createdAt: string };
   profile: ProjectProfile | null;
 }
+
+export interface TaskContextBrief {
+  taskId: string;
+  generatedAt: string;
+  brief: string;
+}

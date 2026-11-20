@@ -60,6 +60,11 @@ router.post('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promis
         subtasks: { orderBy: { position: 'asc' } },
         blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
         blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
+        documents: {
+          include: {
+            document: { select: { id: true, title: true, slug: true, category: true, isPinned: true } },
+          },
+        },
         _count: { select: { comments: true, subtasks: true } },
       },
     });
@@ -143,6 +148,11 @@ router.get('/:sectionId/tasks', async (req: AuthRequest, res: Response): Promise
         subtasks: { orderBy: { position: 'asc' } },
         blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
         blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
+        documents: {
+          include: {
+            document: { select: { id: true, title: true, slug: true, category: true, isPinned: true } },
+          },
+        },
         _count: { select: { comments: true, subtasks: true } },
       },
       orderBy: { position: 'asc' },

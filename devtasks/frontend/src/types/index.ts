@@ -57,10 +57,27 @@ export interface TaskDependency {
   task?: TaskDependencyRef;
 }
 
+export interface TaskDocumentLink {
+  document: {
+    id: string;
+    title: string;
+    slug: string;
+    category: string;
+    isPinned: boolean;
+  };
+}
+
 export interface Task {
   id: string;
   title: string;
   description: string | null;
+  context?: string | null;
+  acceptanceCriteria?: string | null;
+  outOfScope?: string | null;
+  technicalNotes?: string | null;
+  repoUrl?: string | null;
+  branch?: string | null;
+  prUrl?: string | null;
   startDate?: string | null;
   dueDate?: string | null;
   status: TaskStatus;
@@ -74,6 +91,7 @@ export interface Task {
   subtasks?: Subtask[];
   blockedBy?: TaskDependency[];
   blocks?: TaskDependency[];
+  documents?: TaskDocumentLink[];
   _count: { comments: number; subtasks?: number };
 }
 

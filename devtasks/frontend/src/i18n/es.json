@@ -445,5 +445,32 @@
     "editHint": "Esta información es el punto de entrada para developers y agentes.",
     "purpose": "Propósito",
     "repoUrl": "URL del repositorio"
+  },
+  "taskContext": {
+    "title": "Contexto de la tarea",
+    "subtitle": "Lo que necesita saber alguien antes de tomarla.",
+    "edit": "Editar contexto",
+    "complete": "Completar contexto",
+    "take": "Tomar tarea",
+    "brief": "Ver Pickup Brief",
+    "briefTitle": "Pickup Brief",
+    "briefHint": "Resumen generado con el contexto actual de la tarea.",
+    "empty": "Aún no hay contexto para tomar esta tarea. Complétalo para que cualquiera pueda empezar.",
+    "why": "Por qué / contexto",
+    "acceptance": "Criterios de aceptación",
+    "outOfScope": "Fuera de alcance",
+    "notes": "Notas técnicas",
+    "links": "Repositorio y PR",
+    "repo": "Repositorio",
+    "pr": "Pull request",
+    "documents": "Documentos relacionados",
+    "editTitle": "Editar contexto de la tarea",
+    "editHint": "El Pickup Brief se genera automáticamente con estos campos.",
+    "repoUrl": "URL del repositorio",
+    "branch": "Rama",
+    "prUrl": "URL del PR",
+    "saveError": "No se pudo guardar el contexto de la tarea.",
+    "claimError": "No se pudo tomar la tarea.",
+    "briefError": "No se pudo generar el Pickup Brief."
   }
 }

@@ -443,5 +443,32 @@
     "editHint": "This information is the entry point for developers and agents.",
     "purpose": "Purpose",
     "repoUrl": "Repository URL"
+  },
+  "taskContext": {
+    "title": "Task context",
+    "subtitle": "What someone needs to know before taking this task.",
+    "edit": "Edit context",
+    "complete": "Complete context",
+    "take": "Take task",
+    "brief": "View Pickup Brief",
+    "briefTitle": "Pickup Brief",
+    "briefHint": "Summary generated from the task's current context.",
+    "empty": "There is no context to take this task yet. Complete it so anyone can start.",
+    "why": "Why / context",
+    "acceptance": "Acceptance criteria",
+    "outOfScope": "Out of scope",
+    "notes": "Technical notes",
+    "links": "Repository and PR",
+    "repo": "Repository",
+    "pr": "Pull request",
+    "documents": "Related documents",
+    "editTitle": "Edit task context",
+    "editHint": "The Pickup Brief is generated automatically from these fields.",
+    "repoUrl": "Repository URL",
+    "branch": "Branch",
+    "prUrl": "PR URL",
+    "saveError": "Could not save the task context.",
+    "claimError": "Could not take the task.",
+    "briefError": "Could not generate the Pickup Brief."
   }
 }

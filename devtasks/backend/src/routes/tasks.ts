@@ -4,9 +4,66 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 import { requireTaskAccess, ensureSectionAccess } from '../lib/access';
 import { notify } from '../lib/notify';
 import { logActivity, logTaskEvent } from '../lib/activity';
+import { buildPickupBrief } from '../lib/pickupBrief';
 
 const router = Router();
 router.use(authMiddleware);
+
+const TASK_TEXT_LIMITS: Record<string, number> = {
+  context: 10000,
+  acceptanceCriteria: 10000,
+  outOfScope: 5000,
+  technicalNotes: 10000,
+  repoUrl: 1000,
+  branch: 200,
+  prUrl: 1000,
+};
+
+function optionalText(value: unknown, field: string): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.length > TASK_TEXT_LIMITS[field]) return undefined;
+  return trimmed;
+}
+
+const TASK_DETAIL_INCLUDE = {
+  section: {
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      project: { select: { id: true, name: true, slug: true } },
+    },
+  },
+  tags: { include: { tag: true } },
+  assignees: {
+    include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+  },
+  subtasks: { orderBy: { position: 'asc' as const } },
+  comments: {
+    orderBy: { createdAt: 'asc' as const },
+    take: 100,
+    include: { author: { select: { id: true, name: true, avatar: true } } },
+  },
+  blockedBy: {
+    include: { dependsOn: { select: { id: true, title: true, status: true } } },
+  },
+  blocks: {
+    include: { task: { select: { id: true, title: true, status: true } } },
+  },
+  attachments: {
+    select: { id: true, filename: true, mimeType: true, size: true, createdAt: true },
+  },
+  documents: {
+    include: {
+      document: { select: { id: true, title: true, slug: true, category: true, isPinned: true } },
+    },
+  },
+  _count: { select: { comments: true, subtasks: true, attachments: true } },
+} as const;
 
 const STATUS_ORDER: Record<string, number> = {
   TODO: 0,
@@ -22,36 +79,7 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 
     const task = await prisma.task.findUnique({
       where: { id: req.params.id as string },
-      include: {
-        section: {
-          select: {
-            id: true,
-            name: true,
-            color: true,
-            project: { select: { id: true, name: true, slug: true } },
-          },
-        },
-        tags: { include: { tag: true } },
-        assignees: {
-          include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
-        },
-        subtasks: { orderBy: { position: 'asc' } },
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          take: 100,
-          include: { author: { select: { id: true, name: true, avatar: true } } },
-        },
-        blockedBy: {
-          include: { dependsOn: { select: { id: true, title: true, status: true } } },
-        },
-        blocks: {
-          include: { task: { select: { id: true, title: true, status: true } } },
-        },
-        attachments: {
-          select: { id: true, filename: true, mimeType: true, size: true, createdAt: true },
-        },
-        _count: { select: { comments: true, subtasks: true, attachments: true } },
-      },
+      include: TASK_DETAIL_INCLUDE,
     });
 
     if (!task) {
@@ -71,6 +99,16 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     if (!await requireTaskAccess(req, res)) return;
     const { title, description, dueDate, startDate } = req.body;
+    const contextual: Record<string, string | null> = {};
+    for (const field of Object.keys(TASK_TEXT_LIMITS)) {
+      if (!Object.prototype.hasOwnProperty.call(req.body ?? {}, field)) continue;
+      const value = optionalText(req.body[field], field);
+      if (value === undefined) {
+        res.status(400).json({ error: `${field} is invalid or too long` });
+        return;
+      }
+      contextual[field] = value;
+    }
     let normalizedDueDate: Date | null | undefined = undefined;
     if (dueDate !== undefined) {
       if (dueDate === null || `${dueDate}`.trim() === '') {
@@ -105,6 +143,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
         ...(description !== undefined && { description }),
         ...(normalizedStartDate !== undefined && { startDate: normalizedStartDate }),
         ...(normalizedDueDate !== undefined && { dueDate: normalizedDueDate }),
+        ...contextual,
       },
       include: {
         tags: { include: { tag: true } },
@@ -112,6 +151,11 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
         subtasks: { orderBy: { position: 'asc' } },
         blockedBy: { include: { dependsOn: { select: { id: true, title: true, status: true } } } },
         blocks: { include: { task: { select: { id: true, title: true, status: true } } } },
+        documents: {
+          include: {
+            document: { select: { id: true, title: true, slug: true, category: true, isPinned: true } },
+          },
+        },
         _count: { select: { comments: true, subtasks: true } },
       },
     });
@@ -125,6 +169,121 @@ router.patch('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
     res.json(updated);
   } catch (error) {
     console.error('Update task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/tasks/:id/claim — assign the current user to the task
+router.post('/:id/claim', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true, title: true, section: { select: { projectId: true } } },
+    });
+    if (!task) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+    const assignee = await prisma.taskAssignee.upsert({
+      where: { taskId_userId: { taskId: task.id, userId: req.userId! } },
+      update: { accessType: 'EDITOR' },
+      create: { taskId: task.id, userId: req.userId!, accessType: 'EDITOR' },
+      include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+    });
+    void logTaskEvent({
+      taskId: task.id,
+      actorId: req.userId!,
+      action: 'ASSIGNEE_ADDED',
+      details: { userId: req.userId, selfClaim: true },
+    });
+    res.json({ ...assignee, taskId: task.id });
+  } catch (error) {
+    console.error('Claim task error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/tasks/:id/context — Pickup Brief for anyone taking the task
+router.get('/:id/context', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res, false)) return;
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      include: TASK_DETAIL_INCLUDE,
+    });
+    if (!task) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+    const activity = await prisma.activityLog.findMany({
+      where: { taskId: task.id },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      select: { action: true, actorName: true, createdAt: true },
+    });
+    const brief = buildPickupBrief(task, activity);
+    res.json({ taskId: task.id, generatedAt: new Date().toISOString(), brief });
+  } catch (error) {
+    console.error('Get task context error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/tasks/:id/documents — link a project document to a task
+router.post('/:id/documents', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+    const documentId = req.body?.documentId;
+    if (typeof documentId !== 'string' || documentId.length === 0) {
+      res.status(400).json({ error: 'documentId is required' });
+      return;
+    }
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true, section: { select: { projectId: true } } },
+    });
+    if (!task) {
+      res.status(404).json({ error: 'Task not found' });
+      return;
+    }
+    const document = await prisma.projectDocument.findFirst({
+      where: { id: documentId, projectId: task.section.projectId },
+      select: { id: true, title: true },
+    });
+    if (!document) {
+      res.status(404).json({ error: 'Document not found in this project' });
+      return;
+    }
+    const existing = await prisma.taskDocument.findUnique({
+      where: { taskId_documentId: { taskId: task.id, documentId } },
+      select: { taskId: true },
+    });
+    if (!existing) {
+      await prisma.taskDocument.create({
+        data: { taskId: task.id, documentId },
+      });
+    }
+    res.status(201).json({ taskId: task.id, documentId, title: document.title });
+  } catch (error) {
+    console.error('Link task document error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/tasks/:id/documents/:documentId — unlink a document
+router.delete('/:id/documents/:documentId', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!await requireTaskAccess(req, res)) return;
+    await prisma.taskDocument.deleteMany({
+      where: {
+        taskId: req.params.id as string,
+        documentId: req.params.documentId as string,
+      },
+    });
+    res.status(204).send();
+  } catch (error) {
+    console.error('Unlink task document error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

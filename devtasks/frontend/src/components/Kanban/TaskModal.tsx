@@ -9,11 +9,13 @@ import { useAuth } from '../../context/AuthContext';
 import type { Task, Tag, Comment, Section, TaskAssignee, ProjectMember, Subtask, TaskDependency } from '../../types';
 import MentionTextarea from './MentionTextarea';
 import TaskAttachments from './TaskAttachments';
+import TaskContext from './TaskContext';
 import ActivityTimeline from '../Activity/ActivityTimeline';
 import DatePickerInput from '../common/DatePicker';
 
 interface TaskModalProps {
   task: Task;
+  projectId?: string;
   projectTags: Tag[];
   projectMembers?: ProjectMember[];
   canEdit?: boolean;
@@ -24,7 +26,7 @@ interface TaskModalProps {
   onMoveSection?: (task: Task, sectionId: string) => void;
 }
 
-export default function TaskModal({ task, projectTags, projectMembers = [], canEdit = true, allSections, onClose, onUpdate, onDelete, onMoveSection }: TaskModalProps) {
+export default function TaskModal({ task, projectId, projectTags, projectMembers = [], canEdit = true, allSections, onClose, onUpdate, onDelete, onMoveSection }: TaskModalProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -617,6 +619,13 @@ export default function TaskModal({ task, projectTags, projectMembers = [], canE
             )}
           </div>
         )}
+
+        <TaskContext
+          task={task}
+          projectId={projectId ?? currentSection?.projectId ?? ''}
+          canEdit={canEdit}
+          onUpdate={onUpdate}
+        />
 
         {/* Assignees */}
         <div className="task-modal-assignees">

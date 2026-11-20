@@ -19,6 +19,7 @@ import type {
   TaskDetail,
   TaskStatus,
   TaskSummary,
+  TaskContextBrief,
 } from './types.js';
 
 export interface KanvyClientOptions {
@@ -147,6 +148,10 @@ export class KanvyClient {
 
   getTask(taskId: string): Promise<TaskDetail> {
     return this.request<TaskDetail>(`/tasks/${encodeURIComponent(taskId)}`);
+  }
+
+  getTaskContext(taskId: string): Promise<TaskContextBrief> {
+    return this.request<TaskContextBrief>(`/tasks/${encodeURIComponent(taskId)}/context`);
   }
 
   updateTask(

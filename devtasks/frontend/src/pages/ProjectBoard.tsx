@@ -373,6 +373,7 @@ export default function ProjectBoard() {
         <Suspense fallback={null}>
           <TaskModal
           task={selectedTask}
+          projectId={project.id}
           projectTags={project.tags || []}
           projectMembers={project.members || []}
           canEdit={canEdit}

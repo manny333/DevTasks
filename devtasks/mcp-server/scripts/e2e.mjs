@@ -171,6 +171,14 @@ const apiServer = http.createServer(async (req, res) => {
     sendJson(res, 200, taskDetail);
     return;
   }
+  if (req.method === 'GET' && path === '/api/tasks/task1/context') {
+    sendJson(res, 200, {
+      taskId: 'task1',
+      generatedAt: '2026-11-20T00:00:00.000Z',
+      brief: '# Pickup Brief — First task\n\n## Qué hay que lograr\n\nFinish the task.',
+    });
+    return;
+  }
   if (req.method === 'PATCH' && path === '/api/tasks/task1') {
     const body = await readBody(req);
     sendJson(res, 200, { ...taskDetail, ...body });
@@ -250,7 +258,7 @@ try {
 
   const tools = await client.listTools();
   const toolNames = tools.tools.map((tool) => tool.name).sort();
-  check('lists 34 tools', toolNames.length === 34, `${toolNames.length}: ${toolNames.join(', ')}`);
+  check('lists 35 tools', toolNames.length === 35, `${toolNames.length}: ${toolNames.join(', ')}`);
 
   const projectsResult = await client.callTool({ name: 'list_projects', arguments: {} });
   check('list_projects returns the project', textOf(projectsResult).includes('Demo Project'));
@@ -278,6 +286,9 @@ try {
 
   const detail = await client.callTool({ name: 'get_task', arguments: { taskId: 'task1' } });
   check('get_task returns full detail', textOf(detail).includes('## Subtasks (1)'));
+
+  const pickup = await client.callTool({ name: 'get_task_context', arguments: { taskId: 'task1' } });
+  check('get_task_context returns a Pickup Brief', textOf(pickup).includes('Pickup Brief'));
 
   const myTasks = await client.callTool({ name: 'my_tasks', arguments: {} });
   check('my_tasks lists assigned work', textOf(myTasks).includes('My tasks'));

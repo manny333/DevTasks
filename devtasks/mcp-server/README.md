@@ -6,7 +6,7 @@ Built on the open MCP standard, so the same server works with Claude Code, Curso
 
 ## Features
 
-- **34 tools**: project/task reads, project passport, project documentation, task lifecycle, planning, tags, members, dependencies and bulk creation.
+- **35 tools**: project/task reads, Pickup Brief, project passport, project documentation, task lifecycle, planning, tags, members, dependencies and bulk creation.
 - **Resources**: `kanvy://me`, `kanvy://projects`, `kanvy://projects/{slug}`, `kanvy://projects/{slug}/board`, `kanvy://projects/{slug}/passport`, `kanvy://projects/{slug}/documents`, `kanvy://projects/{slug}/documents/{documentId}`, `kanvy://projects/{slug}/context`, `kanvy://tasks/{taskId}`.
 - **Prompts**: `project_status_report`, `daily_standup`, `sprint_planning`, `triage_overdue`, `release_notes`.
 - **Transports**: stdio (default) and Streamable HTTP (`/mcp`).
@@ -65,6 +65,7 @@ Or use the project-level `.mcp.json` at the repository root.
 | `list_projects` | — |
 | `get_project` | `slug` |
 | `get_task` | `taskId` (full detail) |
+| `get_task_context` | `taskId` (Pickup Brief with context, docs and dependencies) |
 | `list_tasks` | `sectionId`, `status?`, `archived?`, `limit?` |
 | `list_comments` | `taskId`, `limit?` |
 | `list_members` | `projectSlug` |
