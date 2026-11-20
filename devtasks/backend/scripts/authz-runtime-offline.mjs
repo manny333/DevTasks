@@ -65,6 +65,16 @@ const fake = {
     findUnique: async () => null,
     findMany: async () => [],
   },
+  projectReadyConfig: {
+    findUnique: async () => null,
+    upsert: async () => ({
+      projectId: PROJECT,
+      requireContext: true,
+      requireAcceptanceCriteria: true,
+      requireNoBlockers: true,
+      requireDocument: false,
+    }),
+  },
   section: {
     findUnique: async (args) => {
       const where = (args && args.where) || {};
