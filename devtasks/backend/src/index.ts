@@ -22,6 +22,7 @@ import userSettingsRoutes from './routes/userSettings';
 import exportRoutes from './routes/export';
 import meRoutes from './routes/me';
 import documentRoutes from './routes/documents';
+import profileRoutes from './routes/profile';
 import { verifyUploadSignature, resolveUploadPath } from './lib/storage';
 import prisma from './lib/prisma';
 
@@ -103,6 +104,7 @@ app.use('/api/user', userSettingsRoutes); // /api/user/ai-keys
 app.use('/api/me', meRoutes);             // /api/me/tasks
 app.use('/api/projects', exportRoutes);  // /api/projects/:projectId/export
 app.use('/api/projects', documentRoutes); // /api/projects/:projectId/documents, /context
+app.use('/api/projects', profileRoutes);  // /api/projects/:projectId/profile, /passport
 
 // Health check
 app.get('/api/health', async (_req, res) => {

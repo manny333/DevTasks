@@ -13,6 +13,7 @@ import {
   formatProjectHealth,
   formatProjectLine,
   formatProjectMarkdown,
+  formatProjectPassport,
   formatSearchResults,
   formatTags,
   formatTaskDetail,
@@ -835,6 +836,22 @@ export function createKanvyTools(client: KanvyClient, options: KanvyToolOptions)
       async execute({ projectSlug }) {
         const project = await client.getProject(projectSlug);
         return text(formatProjectContext(await client.getProjectContext(project.id)));
+      },
+    }),
+
+    defineTool({
+      name: 'kanvy_get_project_passport',
+      description:
+        'Get the project passport: purpose, repository, environments, stack, commands, owners, on-call and start-here guide.',
+      parameters: {
+        projectSlug: { type: 'string', required: true, description: 'Project slug' },
+      },
+      output: TEXT_OUTPUT,
+      timeoutMs,
+      isConcurrencySafe: () => true,
+      async execute({ projectSlug }) {
+        const project = await client.getProject(projectSlug);
+        return text(formatProjectPassport(await client.getProjectPassport(project.id)));
       },
     }),
   ];

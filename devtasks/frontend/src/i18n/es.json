@@ -413,5 +413,37 @@
       "RUNBOOK": "Runbook",
       "OTHER": "Otro"
     }
+  },
+  "overview": {
+    "title": "Ficha",
+    "eyebrow": "Ficha del proyecto",
+    "emptyPurpose": "Aún no hay una descripción operativa del proyecto.",
+    "edit": "Editar ficha",
+    "complete": "Completar ficha",
+    "repo": "Repositorio y ambientes",
+    "branch": "Rama",
+    "deploy": "Producción",
+    "staging": "Staging",
+    "stack": "Stack",
+    "commands": "Cómo ejecutar",
+    "setup": "Instalación",
+    "run": "Desarrollo",
+    "test": "Pruebas",
+    "team": "Equipo",
+    "owners": "Owners",
+    "onCall": "On-call",
+    "startHere": "Empezar aquí",
+    "lastUpdated": "Actualizado {{date}} por {{name}}",
+    "notSet": "Sin definir",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "emptyHint": "Completa la ficha para que cualquiera pueda empezar sin preguntar.",
+    "empty": "La ficha del proyecto todavía está vacía. Es el punto de entrada para personas y agentes.",
+    "loadError": "No se pudo cargar la ficha del proyecto.",
+    "saveError": "No se pudo guardar la ficha del proyecto.",
+    "editTitle": "Editar ficha del proyecto",
+    "editHint": "Esta información es el punto de entrada para developers y agentes.",
+    "purpose": "Propósito",
+    "repoUrl": "URL del repositorio"
   }
 }

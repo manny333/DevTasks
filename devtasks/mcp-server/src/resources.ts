@@ -7,6 +7,7 @@ import {
   formatProjectContext,
   formatProjectLine,
   formatProjectMarkdown,
+  formatProjectPassport,
   formatTaskDetail,
   formatTaskLine,
 } from './format.js';
@@ -261,6 +262,40 @@ export function registerResources(server: McpServer, client: KanvyClient): void 
       const context = await client.getProjectContext(project.id);
       return {
         contents: [{ uri: uri.href, mimeType: 'text/markdown', text: formatProjectContext(context) }],
+      };
+    }
+  );
+
+  const passportTemplate = new ResourceTemplate('kanvy://projects/{slug}/passport', {
+    list: async () => {
+      const projects = await client.listProjects();
+      return {
+        resources: projects.map((project) => ({
+          uri: `kanvy://projects/${project.slug}/passport`,
+          name: `${project.slug}-passport`,
+          title: `${project.name} passport`,
+          description: 'Operational project passport: stack, commands, environments and owners.',
+          mimeType: 'text/markdown',
+        })),
+      };
+    },
+  });
+
+  server.registerResource(
+    'project-passport',
+    passportTemplate,
+    {
+      title: 'Kanvy project passport',
+      description: 'Operational overview of a project for people and agents.',
+      mimeType: 'text/markdown',
+    },
+    async (uri, variables) => {
+      const slug = variable(variables.slug);
+      if (!slug) throw new Error('Missing project slug in resource URI');
+      const project = await client.getProject(slug);
+      const passport = await client.getProjectPassport(project.id);
+      return {
+        contents: [{ uri: uri.href, mimeType: 'text/markdown', text: formatProjectPassport(passport) }],
       };
     }
   );

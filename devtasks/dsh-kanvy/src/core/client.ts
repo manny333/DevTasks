@@ -12,6 +12,7 @@ import type {
   ProjectContext,
   ProjectDocument,
   ProjectDocumentSummary,
+  ProjectPassport,
   SearchResults,
   SubtaskItem,
   TagItem,
@@ -311,6 +312,12 @@ export class KanvyClient {
   getProjectContext(projectId: string): Promise<ProjectContext> {
     return this.request<ProjectContext>(
       `/projects/${encodeURIComponent(projectId)}/context`
+    );
+  }
+
+  getProjectPassport(projectId: string): Promise<ProjectPassport> {
+    return this.request<ProjectPassport>(
+      `/projects/${encodeURIComponent(projectId)}/passport`
     );
   }
 

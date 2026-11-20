@@ -14,6 +14,7 @@ const CalendarBoard = lazy(() => import('../components/Calendar/CalendarBoard'))
 const ListView = lazy(() => import('../components/ListView/ListView'));
 const GanttBoard = lazy(() => import('../components/Gantt/GanttBoard'));
 const ProjectDocs = lazy(() => import('../components/Docs/ProjectDocs'));
+const ProjectPassport = lazy(() => import('../components/Project/ProjectPassport'));
 const TaskModal = lazy(() => import('../components/Kanban/TaskModal'));
 import { DndContext, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
@@ -39,7 +40,7 @@ export default function ProjectBoard() {
   const [pendingDeleteSection, setPendingDeleteSection] = useState<Section | null>(null);
   const deleteSectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showArchivedSections, setShowArchivedSections] = useState(false);
-  const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt' | 'docs'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'calendar' | 'list' | 'gantt' | 'docs' | 'passport'>('kanban');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showAIImport, setShowAIImport] = useState(false);
 
@@ -268,6 +269,15 @@ export default function ProjectBoard() {
         {/* View toggle */}
         <div className="calendar-view-toggle-bar">
           <button
+            className={`calendar-view-btn ${viewMode === 'passport' ? 'active' : ''}`}
+            onClick={() => setViewMode('passport')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>
+            </svg>
+            {t('overview.title')}
+          </button>
+          <button
             className={`calendar-view-btn ${viewMode === 'kanban' ? 'active' : ''}`}
             onClick={() => setViewMode('kanban')}
           >
@@ -316,7 +326,9 @@ export default function ProjectBoard() {
         </div>
 
         <Suspense fallback={<div className="loading-screen"><div className="spinner" /></div>}>
-        {viewMode === 'kanban' ? (
+        {viewMode === 'passport' ? (
+          <ProjectPassport project={project} canEdit={canManageProject} />
+        ) : viewMode === 'kanban' ? (
           activeSection ? (
             <Board
               section={activeSection}

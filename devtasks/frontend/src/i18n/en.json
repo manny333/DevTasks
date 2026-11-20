@@ -411,5 +411,37 @@
       "RUNBOOK": "Runbook",
       "OTHER": "Other"
     }
+  },
+  "overview": {
+    "title": "Overview",
+    "eyebrow": "Project passport",
+    "emptyPurpose": "There is no operational project description yet.",
+    "edit": "Edit overview",
+    "complete": "Complete overview",
+    "repo": "Repository and environments",
+    "branch": "Branch",
+    "deploy": "Production",
+    "staging": "Staging",
+    "stack": "Stack",
+    "commands": "How to run",
+    "setup": "Setup",
+    "run": "Development",
+    "test": "Tests",
+    "team": "Team",
+    "owners": "Owners",
+    "onCall": "On-call",
+    "startHere": "Start here",
+    "lastUpdated": "Updated {{date}} by {{name}}",
+    "notSet": "Not set",
+    "copy": "Copy",
+    "copied": "Copied",
+    "emptyHint": "Complete the overview so anyone can start without asking.",
+    "empty": "The project overview is still empty. It is the entry point for people and agents.",
+    "loadError": "Could not load the project overview.",
+    "saveError": "Could not save the project overview.",
+    "editTitle": "Edit project overview",
+    "editHint": "This information is the entry point for developers and agents.",
+    "purpose": "Purpose",
+    "repoUrl": "Repository URL"
   }
 }

@@ -19,17 +19,18 @@ function fakeContext() {
   };
 }
 
-test('plugin: registers 33 tools on a DSH-like context', () => {
+test('plugin: registers 34 tools on a DSH-like context', () => {
   const ctx = fakeContext();
   apply(ctx, { apiUrl: 'http://kanvy.test/api', token: 'test-token', allowWrites: false });
 
   const names = ctx.registered.map((tool) => tool.name).sort();
-  assert.equal(names.length, 33);
+  assert.equal(names.length, 34);
   assert.ok(names.includes('kanvy_list_projects'));
   assert.ok(names.includes('kanvy_create_task'));
   assert.ok(names.includes('kanvy_get_task'));
   assert.ok(names.includes('kanvy_list_documents'));
   assert.ok(names.includes('kanvy_get_project_context'));
+  assert.ok(names.includes('kanvy_get_project_passport'));
   assert.ok(names.includes('kanvy_whoami'));
 });
 

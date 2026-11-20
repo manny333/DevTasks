@@ -9,6 +9,7 @@ import type {
   ProjectContext,
   ProjectDocument,
   ProjectDocumentSummary,
+  ProjectPassport,
   SearchResults,
   SectionSummary,
   SubtaskItem,
@@ -326,4 +327,40 @@ export function formatProjectContext(context: ProjectContext): string {
     context.content || 'No pinned documents yet.',
     ...(context.truncated ? ['', '… context truncated.'] : []),
   ].join('\n');
+}
+
+export function formatProjectPassport(passport: ProjectPassport): string {
+  const { project, profile } = passport;
+  const lines = [
+    `# ${project.name} — project passport`,
+    '',
+    `- Slug: \`${project.slug}\``,
+    `- Project ID: \`${project.id}\``,
+    ...(project.description ? ['', project.description] : []),
+  ];
+
+  if (!profile) {
+    lines.push('', 'No profile configured yet.');
+    return lines.join('\n');
+  }
+
+  if (profile.purpose) lines.push('', '## Purpose', '', profile.purpose);
+  if (profile.repoUrl) lines.push('', '## Repository', '', `- URL: ${profile.repoUrl}`);
+  if (profile.defaultBranch) lines.push(`- Default branch: \`${profile.defaultBranch}\``);
+  if (profile.deployUrl) lines.push(`- Production: ${profile.deployUrl}`);
+  if (profile.stagingUrl) lines.push(`- Staging: ${profile.stagingUrl}`);
+  if (profile.stack) lines.push('', '## Stack', '', profile.stack);
+  if (profile.setupCommands) lines.push('', '## Setup', '', '```', profile.setupCommands, '```');
+  if (profile.runCommands) lines.push('', '## Development', '', '```', profile.runCommands, '```');
+  if (profile.testCommands) lines.push('', '## Tests', '', '```', profile.testCommands, '```');
+  if (profile.owners || profile.onCall) {
+    lines.push('', '## Team');
+    if (profile.owners) lines.push('', `- Owners: ${profile.owners}`);
+    if (profile.onCall) lines.push(`- On-call: ${profile.onCall}`);
+  }
+  if (profile.startHere) lines.push('', '## Start here', '', profile.startHere);
+  if (profile.updatedAt) {
+    lines.push('', `_Updated ${formatDate(profile.updatedAt)}${profile.updatedBy?.name ? ` by ${profile.updatedBy.name}` : ''}._`);
+  }
+  return lines.join('\n');
 }

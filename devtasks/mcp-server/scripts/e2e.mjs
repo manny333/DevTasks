@@ -85,6 +85,29 @@ const projectContext = {
   truncated: false,
 };
 
+const profile = {
+  projectId: 'p1',
+  purpose: 'A demo project for the e2e test.',
+  repoUrl: 'https://github.com/example/demo',
+  defaultBranch: 'main',
+  stack: 'React + Express',
+  setupCommands: 'npm install',
+  runCommands: 'npm run dev',
+  testCommands: 'npm test',
+  deployUrl: null,
+  stagingUrl: null,
+  owners: 'Emmanuel',
+  onCall: 'Emmanuel',
+  startHere: '# Start here\n\nRead the docs.',
+  updatedBy: user,
+  updatedAt: '2026-11-03T00:00:00.000Z',
+};
+
+const passport = {
+  project: { id: 'p1', name: 'Demo Project', slug: 'demo', description: 'A demo project', createdAt: '2026-01-01T00:00:00.000Z' },
+  profile,
+};
+
 const taskDetail = {
   ...tasks[0],
   section: { id: 'sec1', name: 'Backlog', project: { id: 'p1', name: 'Demo Project', slug: 'demo' } },
@@ -182,6 +205,10 @@ const apiServer = http.createServer(async (req, res) => {
     sendJson(res, 200, projectContext);
     return;
   }
+  if (req.method === 'GET' && path === '/api/projects/p1/passport') {
+    sendJson(res, 200, passport);
+    return;
+  }
   if (req.method === 'GET' && path === '/api/projects/p1/members') {
     sendJson(res, 200, [{ id: 'm1', role: 'OWNER', accessType: 'FULL', user }]);
     return;
@@ -223,7 +250,7 @@ try {
 
   const tools = await client.listTools();
   const toolNames = tools.tools.map((tool) => tool.name).sort();
-  check('lists 33 tools', toolNames.length === 33, `${toolNames.length}: ${toolNames.join(', ')}`);
+  check('lists 34 tools', toolNames.length === 34, `${toolNames.length}: ${toolNames.join(', ')}`);
 
   const projectsResult = await client.callTool({ name: 'list_projects', arguments: {} });
   check('list_projects returns the project', textOf(projectsResult).includes('Demo Project'));
@@ -276,6 +303,9 @@ try {
   const context = await client.callTool({ name: 'get_project_context', arguments: { projectSlug: 'demo' } });
   check('get_project_context returns pinned docs', textOf(context).includes('## Demo specification'));
 
+  const passportTool = await client.callTool({ name: 'get_project_passport', arguments: { projectSlug: 'demo' } });
+  check('get_project_passport returns operational context', textOf(passportTool).includes('## Setup'));
+
   const health = await client.callTool({ name: 'project_health', arguments: { projectSlug: 'demo' } });
   check('project_health summarizes the project', textOf(health).includes('Completion'));
 
@@ -294,6 +324,7 @@ try {
   const templates = await client.listResourceTemplates();
   check('lists the project resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}'));
   check('lists the document resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}/documents/{documentId}'));
+  check('lists the passport resource template', templates.resourceTemplates.some((t) => t.uriTemplate === 'kanvy://projects/{slug}/passport'));
 
   const resource = await client.readResource({ uri: 'kanvy://projects/demo' });
   check('reads a project resource', (resource.contents[0]?.text ?? '').includes('# Demo Project'));
@@ -306,6 +337,9 @@ try {
 
   const contextResource = await client.readResource({ uri: 'kanvy://projects/demo/context' });
   check('reads the context resource', (contextResource.contents[0]?.text ?? '').includes('project context'));
+
+  const passportResource = await client.readResource({ uri: 'kanvy://projects/demo/passport' });
+  check('reads the passport resource', (passportResource.contents[0]?.text ?? '').includes('## Setup'));
 
   const prompts = await client.listPrompts();
   check('lists the status report prompt', prompts.prompts.some((p) => p.name === 'project_status_report'));

@@ -178,3 +178,26 @@ export interface ProjectContext {
   content: string;
   truncated: boolean;
 }
+
+export interface ProjectProfile {
+  projectId: string;
+  purpose: string | null;
+  repoUrl: string | null;
+  defaultBranch: string | null;
+  stack: string | null;
+  setupCommands: string | null;
+  runCommands: string | null;
+  testCommands: string | null;
+  deployUrl: string | null;
+  stagingUrl: string | null;
+  owners: string | null;
+  onCall: string | null;
+  startHere: string | null;
+  updatedBy?: { id: string; name: string; email?: string } | null;
+  updatedAt: string | null;
+}
+
+export interface ProjectPassport {
+  project: { id: string; name: string; slug: string; description?: string | null; createdAt: string };
+  profile: ProjectProfile | null;
+}

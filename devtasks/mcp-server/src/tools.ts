@@ -13,6 +13,7 @@ import {
   formatProjectHealth,
   formatProjectLine,
   formatProjectMarkdown,
+  formatProjectPassport,
   formatSearchResults,
   formatSubtasks,
   formatTags,
@@ -112,6 +113,7 @@ export interface ToolHandlers {
     limit?: number;
   }) => Promise<string>;
   get_project_context: (input: { projectSlug: string }) => Promise<string>;
+  get_project_passport: (input: { projectSlug: string }) => Promise<string>;
 }
 
 const DEFAULT_LIMIT = 25;
@@ -430,6 +432,11 @@ export function createToolHandlers(client: KanvyClient, options: ToolOptions): T
     get_project_context: async ({ projectSlug }) => {
       const project = await client.getProject(projectSlug);
       return formatProjectContext(await client.getProjectContext(project.id));
+    },
+
+    get_project_passport: async ({ projectSlug }) => {
+      const project = await client.getProject(projectSlug);
+      return formatProjectPassport(await client.getProjectPassport(project.id));
     },
   };
 }
@@ -966,5 +973,19 @@ export function registerTools(server: McpServer, handlers: ToolHandlers): void {
       annotations: readOnly,
     },
     async ({ projectSlug }) => run(() => handlers.get_project_context({ projectSlug }))
+  );
+
+  server.registerTool(
+    'get_project_passport',
+    {
+      title: 'Get Kanvy project passport',
+      description:
+        'Get the project passport: purpose, repository, environments, stack, commands, owners, on-call and start-here guide.',
+      inputSchema: z.object({
+        projectSlug: z.string().min(1).describe('Project slug'),
+      }),
+      annotations: readOnly,
+    },
+    async ({ projectSlug }) => run(() => handlers.get_project_passport({ projectSlug }))
   );
 }

@@ -138,6 +138,24 @@ export interface Project {
   _count?: { sections: number; members: number };
 }
 
+export interface ProjectProfile {
+  projectId: string;
+  purpose: string | null;
+  repoUrl: string | null;
+  defaultBranch: string | null;
+  stack: string | null;
+  setupCommands: string | null;
+  runCommands: string | null;
+  testCommands: string | null;
+  deployUrl: string | null;
+  stagingUrl: string | null;
+  owners: string | null;
+  onCall: string | null;
+  startHere: string | null;
+  updatedBy: { id: string; name: string; email?: string } | null;
+  updatedAt: string | null;
+}
+
 export type DocumentCategory =
   | 'SPEC'
   | 'REQUIREMENTS'

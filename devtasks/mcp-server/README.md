@@ -6,8 +6,8 @@ Built on the open MCP standard, so the same server works with Claude Code, Curso
 
 ## Features
 
-- **33 tools**: project/task reads, task lifecycle, project documentation, planning, tags, members, dependencies and bulk creation.
-- **Resources**: `kanvy://me`, `kanvy://projects`, `kanvy://projects/{slug}`, `kanvy://projects/{slug}/board`, `kanvy://projects/{slug}/documents`, `kanvy://projects/{slug}/documents/{documentId}`, `kanvy://projects/{slug}/context`, `kanvy://tasks/{taskId}`.
+- **34 tools**: project/task reads, project passport, project documentation, task lifecycle, planning, tags, members, dependencies and bulk creation.
+- **Resources**: `kanvy://me`, `kanvy://projects`, `kanvy://projects/{slug}`, `kanvy://projects/{slug}/board`, `kanvy://projects/{slug}/passport`, `kanvy://projects/{slug}/documents`, `kanvy://projects/{slug}/documents/{documentId}`, `kanvy://projects/{slug}/context`, `kanvy://tasks/{taskId}`.
 - **Prompts**: `project_status_report`, `daily_standup`, `sprint_planning`, `triage_overdue`, `release_notes`.
 - **Transports**: stdio (default) and Streamable HTTP (`/mcp`).
 - **Safe by default**: writes can be disabled with `KANVY_ALLOW_WRITES=0`; HTTP is loopback-only unless a bearer token is configured.
@@ -80,6 +80,7 @@ Or use the project-level `.mcp.json` at the repository root.
 | `get_document` | `projectSlug`, `documentId` (id or slug), `offset?`, `maxChars?` |
 | `search_documents` | `projectSlug`, `query`, `limit?` |
 | `get_project_context` | `projectSlug` (description + pinned docs) |
+| `get_project_passport` | `projectSlug` (stack, repo, commands, owners, start here) |
 
 ### Write (requires `KANVY_ALLOW_WRITES=1`)
 
@@ -109,6 +110,7 @@ Every tool returns compact markdown/text with ids so the agent can chain calls. 
 - `kanvy://projects` — overview of accessible projects.
 - `kanvy://projects/{slug}` — sections, task counts and tags of one project.
 - `kanvy://projects/{slug}/board` — sections and compact task lines.
+- `kanvy://projects/{slug}/passport` — operational project passport.
 - `kanvy://projects/{slug}/documents` — project documentation index.
 - `kanvy://projects/{slug}/documents/{documentId}` — full Markdown document.
 - `kanvy://projects/{slug}/context` — project description plus pinned documents.

@@ -78,6 +78,26 @@ function fakeClient(overrides = {}) {
       content: '# Demo Project\n\n## Demo specification',
       truncated: false,
     }),
+    getProjectPassport: async () => ({
+      project: { id: 'p1', name: 'Demo Project', slug: 'demo', createdAt: '2026-01-01T00:00:00.000Z' },
+      profile: {
+        projectId: 'p1',
+        purpose: 'Demo purpose',
+        repoUrl: 'https://github.com/example/demo',
+        defaultBranch: 'main',
+        stack: 'React + Express',
+        setupCommands: 'npm install',
+        runCommands: 'npm run dev',
+        testCommands: 'npm test',
+        deployUrl: null,
+        stagingUrl: null,
+        owners: 'Emmanuel',
+        onCall: 'Emmanuel',
+        startHere: '# Start here',
+        updatedBy: { id: 'u1', name: 'Emmanuel' },
+        updatedAt: '2026-11-03T00:00:00.000Z',
+      },
+    }),
     ...overrides,
   };
 }
@@ -86,7 +106,7 @@ function byName(tools) {
   return Object.fromEntries(tools.map((tool) => [tool.name, tool]));
 }
 
-test('tools: registers all 33 native tools', () => {
+test('tools: registers all 34 native tools', () => {
   const tools = byName(createKanvyTools(fakeClient(), { allowWrites: false }));
   assert.deepEqual(Object.keys(tools).sort(), [
     'kanvy_add_comment',
@@ -105,6 +125,7 @@ test('tools: registers all 33 native tools', () => {
     'kanvy_get_document',
     'kanvy_get_project',
     'kanvy_get_project_context',
+    'kanvy_get_project_passport',
     'kanvy_get_task',
     'kanvy_list_activity',
     'kanvy_list_attachments',
@@ -219,6 +240,10 @@ test('tools: documents can be listed and read by slug', async () => {
 
   const context = await tools.kanvy_get_project_context.execute({ projectSlug: 'demo' }, {});
   assert.match(context.text, /Demo specification/);
+
+  const passport = await tools.kanvy_get_project_passport.execute({ projectSlug: 'demo' }, {});
+  assert.match(passport.text, /## Setup/);
+  assert.match(passport.text, /npm install/);
 });
 
 test('tools: writes validate dates and return ids', async () => {
